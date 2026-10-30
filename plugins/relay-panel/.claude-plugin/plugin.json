@@ -1,0 +1,31 @@
+{
+  "name": "relay-panel",
+  "version": "0.1.0",
+  "description": "Progress bar above the prompt for /relay, plus an agents panel (/relay-agents) with swappable sprite packs: running, finished and planned subagents with model, task progress, context, cost and time. Forked from savvy-progress in johnnyvizz/claude-kit.",
+  "author": { "name": "Tommy Liang" },
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "language": {
+      "type": "string",
+      "title": "Panel language",
+      "description": "auto follows Claude Code's language setting, then the system locale; en, ru or he (Hebrew, drawn right to left)",
+      "default": "auto",
+      "options": ["auto", "en", "ru", "he"]
+    },
+    "autoOpen": {
+      "type": "string",
+      "title": "Open the agents panel",
+      "description": "relay: when a relay worker starts or a plan is reported; any: also when any other subagent starts",
+      "default": "relay",
+      "options": ["relay", "any"]
+    },
+    "pack": {
+      "type": "string",
+      "title": "Sprite pack",
+      "description": "Default sprite pack for the panel; /relay-pack overrides it",
+      "default": "cats",
+      "options": ["cats", "crabs"]
+    }
+  },
+  "license": "MIT"
+}
