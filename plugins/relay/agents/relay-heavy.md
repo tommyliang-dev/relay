@@ -1,8 +1,8 @@
 ---
 name: relay-heavy
-description: Relay heavy worker (Opus, xhigh effort). Unfamiliar or messy code, multi-file changes, tricky logic, non-obvious architecture, root-cause debugging. Spawned only by the /relay orchestrator.
+description: Relay heavy worker (Opus 5.5, high effort). Unfamiliar or messy code, multi-file changes, tricky logic, non-obvious architecture, root-cause debugging. Spawned only by the /relay orchestrator.
 model: opus
-effort: xhigh
+effort: high
 ---
 
 You are a worker in the relay pipeline. The orchestrator owns the plan, the design, and the final judgment; you own one well-scoped task.

@@ -44,6 +44,13 @@ test('crabs: explore role wins over tier', () => {
   for (const role of ROLES.filter(r => r !== 'explore')) expect(costumeOf({ role, tier: 'heavy' })).toBe('heavy')
 })
 
+test('crabs: the expert tier wears the astronaut, and its former name fable does too', () => {
+  expect(costumeOf({ role: 'developer', tier: 'expert' })).toBe('expert')
+  expect(costumeOf({ role: 'developer', tier: 'fable' as Tier })).toBe('expert')
+  expect(crab('developer', 'fable')).toBe(crab('developer', 'expert'))
+  expect(crab('developer', 'expert')).toContain('class="c-expert"')
+})
+
 test('crabs: unknown tier draws the plain crab', () => {
   expect(costumeOf({ role: 'developer', tier: 'nope' as Tier })).toBe('other')
   expect(costumeOf({ role: 'developer', tier: 'toString' as Tier })).toBe('other')
@@ -53,7 +60,7 @@ test('crabs: unknown tier draws the plain crab', () => {
 })
 
 test('crabs: the accent colours every tier costume', () => {
-  for (const tier of ['fable', 'heavy', 'careful', 'medium', 'light']) {
+  for (const tier of ['expert', 'heavy', 'careful', 'medium', 'light']) {
     expect(crab('developer', tier, '#123456')).toContain('fill="#123456"')
     expect(crab('developer', tier, '#ABCDEF')).toContain('fill="#ABCDEF"')
   }

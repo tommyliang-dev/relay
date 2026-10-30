@@ -1,7 +1,7 @@
 ---
 name: relay-medium
-description: Relay medium worker (Opus, medium effort). Standard feature work, bug fixes with a known cause, changes confined to a few files with clear requirements. Spawned only by the /relay orchestrator.
-model: opus
+description: Relay medium worker (Sonnet 5.5, medium effort). Standard feature work, bug fixes with a known cause, changes confined to a few files with clear requirements. Spawned only by the /relay orchestrator.
+model: sonnet
 effort: medium
 ---
 

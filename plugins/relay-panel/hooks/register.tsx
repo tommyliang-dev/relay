@@ -2,11 +2,23 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import { DEFAULT_PACK, PACKS, packById, packIds, resolvePack } from './packs'
-import { nextChangeAt, nextSeasonAt, seasonAt, seasonalPackAt } from './packs/seasons'
+import {
+  OFF_SEASON,
+  SEASONS,
+  SHUFFLE,
+  isHoliday,
+  nextSeasonAt,
+  pickShuffle,
+  resolvePack as resolveShowing,
+  seasonEndAt,
+  seasonKey,
+  shuffleCandidates,
+} from './packs/seasons'
+import type { MonthDay, Resolved, Season } from './packs/seasons'
 import type { Pack, Role, Tier } from './packs/types'
 import type { AgentRun, Flow, Panel, Phase, PlannedTask } from '../types'
 
-// The active sprite pack's id. Every drawing reads it while it draws, so a write
+// The sprite pack showing now (packs/seasons.ts resolvePack). Every drawing reads it while it draws, so a write
 // redraws the band and the panel at once.
 const pack = atom({ plugin: 'relay-panel', key: 'pack' } as const, DEFAULT_PACK)
 const flow = atom({ plugin: 'relay-panel', key: 'flow' } as const, null)
@@ -29,7 +41,9 @@ const STEP_BRIEF = `
 Progress reporting: before any other work, call \`${STEP_TOOL}\` with \`total\` (your plan in 3-8 steps) and \`done: 0\`; call it again with \`done\` and a few-word \`note\` as each step finishes. It only draws a progress bar.`
 const PANE = 'relay-agents'
 const PHASES: readonly Phase[] = ['plan', 'design', 'delegate', 'review', 'close']
-const TIERS: readonly string[] = ['fable', 'heavy', 'careful', 'medium', 'light']
+const TIERS: readonly string[] = ['expert', 'heavy', 'careful', 'medium', 'light']
+// The expert tier's former name: still accepted as input and as an agent type (`relay-fable`), read as `expert`.
+const TIER_ALIAS: Readonly<Record<string, string>> = { fable: 'expert' }
 // The tools' schemas are advice to the model, not a check: what a call may ask
 // the band and the panel to draw is bounded here.
 const MAX_TASKS = 200
@@ -52,6 +66,13 @@ type ProgressInput = {
 // process locale; English when nothing says Hebrew or Russian.
 
 type Lang = 'en' | 'ru' | 'he'
+
+// Month names for the gallery's holiday dates (sentence case; Russian days take the genitive).
+const EN_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+const EN_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const RU_MONTHS = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь']
+const RU_OF = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря']
+const HE_MONTHS = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר']
 
 const STRINGS = {
   en: {
@@ -83,11 +104,15 @@ const STRINGS = {
     busy: 'running',
     ctx: 'ctx',
     packs: 'Sprite packs',
-    active: 'Active',
-    activeSeasonal: 'Active · seasonal',
+    showing: 'Showing',
+    everyday: 'Everyday',
+    holiday: 'Holiday',
+    month: (m: number) => EN_MONTHS[m - 1],
+    day: (m: number, d: number) => `${EN_SHORT[m - 1]} ${d}`,
+    days: (m: number, a: number, b: number) => `${EN_SHORT[m - 1]} ${a}-${b}`,
     use: 'Use',
     variants: (n: number) => `${n} ${n === 1 ? 'variant' : 'variants'}`,
-    tier: { light: 'light', medium: 'medium', careful: 'careful', heavy: 'heavy', fable: 'fable', other: 'other' },
+    tier: { light: 'light', medium: 'medium', careful: 'careful', heavy: 'heavy', expert: 'expert', other: 'other' },
     effort: { low: 'low', medium: 'medium', high: 'high', xhigh: 'xhigh', max: 'max' },
   },
   ru: {
@@ -119,11 +144,15 @@ const STRINGS = {
     busy: 'в работе',
     ctx: 'ctx',
     packs: 'Наборы спрайтов',
-    active: 'Активен',
-    activeSeasonal: 'Активен · по сезону',
+    showing: 'Сейчас',
+    everyday: 'Повседневный',
+    holiday: 'Праздник',
+    month: (m: number) => RU_MONTHS[m - 1],
+    day: (m: number, d: number) => `${d} ${RU_OF[m - 1]}`,
+    days: (m: number, a: number, b: number) => `${a}-${b} ${RU_OF[m - 1]}`,
     use: 'Выбрать',
     variants: (n: number) => `вариантов: ${n}`,
-    tier: { light: 'light', medium: 'medium', careful: 'careful', heavy: 'heavy', fable: 'fable', other: 'other' },
+    tier: { light: 'light', medium: 'medium', careful: 'careful', heavy: 'heavy', expert: 'expert', other: 'other' },
     effort: { low: 'low', medium: 'medium', high: 'high', xhigh: 'xhigh', max: 'max' },
   },
   he: {
@@ -155,11 +184,15 @@ const STRINGS = {
     busy: 'בעבודה',
     ctx: 'הקשר',
     packs: 'ערכות דמויות',
-    active: 'פעילה',
-    activeSeasonal: 'פעילה · עונתית',
+    showing: 'מוצגת',
+    everyday: 'יומיומית',
+    holiday: 'חג',
+    month: (m: number) => HE_MONTHS[m - 1],
+    day: (m: number, d: number) => `${d} ב${HE_MONTHS[m - 1]}`,
+    days: (m: number, a: number, b: number) => `${a}-${b} ב${HE_MONTHS[m - 1]}`,
     use: 'בחירה',
     variants: (n: number) => `גרסאות: ${n}`,
-    tier: { light: 'קל', medium: 'בינוני', careful: 'זהיר', heavy: 'כבד', fable: 'פייבל', other: 'אחר' },
+    tier: { light: 'קל', medium: 'בינוני', careful: 'זהיר', heavy: 'כבד', expert: 'מומחה', other: 'אחר' },
     effort: { low: 'נמוך', medium: 'בינוני', high: 'גבוה', xhigh: 'גבוה מאוד', max: 'מקסימלי' },
   },
 } as const
@@ -204,9 +237,10 @@ const blank = (): Flow => ({
 const isNewFlow = (prev: Flow | null, input: ProgressInput): boolean =>
   !prev || prev.isFinished || (input.title !== undefined && clip(input.title.trim(), MAX_TITLE) !== prev.title)
 
-// Only a known tier is kept: the name is later a key into the tier tables.
+// Only a known tier is kept: the name is later a key into the tier tables. `fable` reads as `expert`.
 const tierName = (v: string): string => {
-  const t = v.replace(/^relay-/, '').trim().toLowerCase()
+  const raw = v.replace(/^relay-/, '').trim().toLowerCase()
+  const t = Object.hasOwn(TIER_ALIAS, raw) ? TIER_ALIAS[raw] : raw
   return TIERS.includes(t) ? t : ''
 }
 
@@ -403,7 +437,7 @@ const barText = (f: Flow, width: number): string => {
 // Agents panel: every subagent of the session, plus the tasks the flow planned.
 
 const TIER_COLOR: Record<string, string> = {
-  fable: '#7F77DD',
+  expert: '#7F77DD',
   heavy: '#D85A30',
   careful: '#BA7517',
   medium: '#378ADD',
@@ -415,7 +449,7 @@ const TIER_COLOR: Record<string, string> = {
 const colorOf = (tier: string): string => TIER_COLOR[tier] ?? '#888780'
 
 const TIER_MODEL: Record<string, [model: string, effort: string]> = {
-  fable: ['Fable', 'high'],
+  expert: ['Opus', 'xhigh'],
   heavy: ['Opus', 'xhigh'],
   careful: ['Opus', 'high'],
   medium: ['Opus', 'medium'],
@@ -489,9 +523,11 @@ const windowOf = (model: string): number => (/haiku-4|claude-3/i.test(model) ? 2
 // relay workers are tiered: the stock workers' runs belong to the stock panel and show as other.
 const isWorker = (type: string): boolean => type.replace(/^[^:]*:/, '').startsWith('relay-')
 
+// `relay-fable` (older installs) is the expert tier under its former name.
 const tierOf = (type: string): Tier => {
   const bare = type.replace(/^[^:]*:/, '')
-  const t = bare.replace(/^relay-/, '').toLowerCase()
+  const raw = bare.replace(/^relay-/, '').toLowerCase()
+  const t = Object.hasOwn(TIER_ALIAS, raw) ? TIER_ALIAS[raw] : raw
   return Object.hasOwn(TIER_COLOR, t) && bare.startsWith('relay-') ? (t as Tier) : 'other'
 }
 
@@ -569,7 +605,7 @@ const ROLE_WORDS: [role: Role, re: RegExp][] = [
   ['designer', /design|\bui\b|\bux\b|css|style|styling|layout|visual|theme|figma|mockup|icon|animation|responsive|a11y|accessib/i],
   ['planner', /\bplan|spec\b|scope|roadmap|break ?down|estimate|outline|requirements|triage|prioriti/i],
 ]
-const TIER_ROLE: Record<string, Role> = { fable: 'architect' }
+const TIER_ROLE: Record<string, Role> = { expert: 'architect' }
 
 // Anything that is not a relay worker keeps the plain sprite; Explore keeps its pirate.
 const costumeOf = (type: string, text = ''): Role => {
@@ -746,7 +782,7 @@ const compactSvg = (pk: Pack, W: number, list: AgentRun[], planned: Planned[], t
 const GALLERY: readonly { role: Role; tier: Tier }[] = [
   { role: 'orchestrator', tier: 'other' },
   { role: 'planner', tier: 'light' },
-  { role: 'architect', tier: 'fable' },
+  { role: 'architect', tier: 'expert' },
   { role: 'developer', tier: 'medium' },
   { role: 'designer', tier: 'careful' },
   { role: 'explore', tier: 'medium' },
@@ -755,13 +791,27 @@ const GALLERY: readonly { role: Role; tier: Tier }[] = [
 const CARD_H = 84
 const CARD_PAD = 12
 
-const packCardSvg = (p: Pack, W: number, isActive: boolean, activeLabel: string = tr().active): string => {
+// A season's dates in the gallery: a whole month by name ("December"), else a day range ("Nov 15-30").
+const seasonDates = (from: MonthDay, to: MonthDay): string => {
+  const s = tr()
+  const [fm, fd] = from
+  const [tm, td] = to
+  if (fm === tm && fd === 1 && td === new Date(2001, tm, 0).getDate()) return s.month(fm)
+  return fm === tm ? s.days(fm, fd, td) : `${s.day(fm, fd)} - ${s.day(tm, td)}`
+}
+
+// A card's labels, in order: the holiday dates, Everyday, Showing. `isOn` draws it in green.
+type CardLabel = { text: string; isOn: boolean }
+const labelText = (labels: readonly CardLabel[]): string => labels.map(l => l.text).join(' · ')
+
+const packCardSvg = (p: Pack, W: number, labels: readonly CardLabel[]): string => {
   const s = tr()
   const fit = panelFit(p)
   const inner = W - CARD_PAD * 2
   // The row fits the card: past its width the sprites step closer, never smaller.
   const pitch = Math.min(fit.pitch, (inner - fit.w) / (GALLERY.length - 1))
-  const activeW = isActive ? textWidth(activeLabel, 11) + 12 : 0
+  const label = labelText(labels)
+  const activeW = label ? textWidth(label, 11) + 12 : 0
   const nameW = inner - activeW
   const count = s.variants(p.variants.length)
   const sprites = GALLERY.map((who, i) =>
@@ -779,7 +829,7 @@ const packCardSvg = (p: Pack, W: number, isActive: boolean, activeLabel: string 
     CARD_H,
     `<rect class="tile" x="0" y="0" width="${W}" height="${CARD_H}" rx="8"/>
 <text ${startText(W, CARD_PAD, 22)} font-family="${FONT}" font-size="13"><tspan class="t" font-weight="600">${xml(fitText(p.name, 13, Math.max(40, nameW - textWidth(count, 11) - 12)))}</tspan><tspan class="s" font-size="11">  ·  ${xml(count)}</tspan></text>
-${isActive ? `<text ${endText(W, W - CARD_PAD, 22, true)} font-family="${FONT}" font-size="11" font-weight="600" fill="#3B9C5F">${xml(activeLabel)}</text>` : ''}
+${label ? `<text ${endText(W, W - CARD_PAD, 22, true)} font-family="${FONT}" font-size="11" font-weight="600">${labels.map((l, i) => `${i ? '<tspan class="s"> · </tspan>' : ''}${l.isOn ? `<tspan fill="#3B9C5F">${xml(l.text)}</tspan>` : `<tspan class="s">${xml(l.text)}</tspan>`}`).join('')}</text>` : ''}
 ${sprites}`,
   )
 }
@@ -813,68 +863,116 @@ async function autoOpen($: EngineInterface, key: string): Promise<void> {
   void $.ui.open({ id: PANE, title: tr().pane })
 }
 
-// Pack mode: 'auto' follows the seasons (packs/seasons.ts), any other value pins that pack.
-// Read from the store key `pack`, then the `pack` option; anything unknown means auto.
+// Which pack shows: the everyday pack (a pack id, or `shuffle` for one picked per session)
+// unless seasons are on and a season holds (packs/seasons.ts resolvePack). Read at session.start
+// from the store keys `everyday`, `shuffleList`, `seasons`, `skipSeason` and `lastShuffle`, then
+// the `pack` and `seasons` options. The store wins. The date is checked at session start and
+// when a new /relay flow starts (the `progress` call isNewFlow treats as new); no timer, and
+// nothing per render or tick.
 const AUTO = 'auto'
-const DAY = 24 * 60 * 60 * 1000
 const isRegistered = (id: string) => packById(id) !== undefined
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const monthDay = (d: Date) => `${MONTHS[d.getMonth()]} ${d.getDate()}`
+const SEASONS_BY_ID = new Map(SEASONS.map(s => [s.id, s]))
 
-// Module scope is fine: session.start sets both again on every (re)load.
-let mode: string = AUTO
-// The one pending season timer, armed only in auto mode. `seasonGen` lets a timer that
-// fires after a cancel (or a re-arm) see it is stale and do nothing.
-let seasonTimer: { cancel: () => void } | undefined
-let seasonGen = 0
-
-const modeOf = (v: unknown): string | undefined => (v === AUTO || (typeof v === 'string' && isRegistered(v)) ? v : undefined)
-
-// The pack the current mode draws now; writes the atom only when the id changes.
-async function applyMode($: EngineInterface): Promise<string> {
-  const id = mode === AUTO ? seasonalPackAt(new Date(await $.clock.now()), isRegistered) : mode
-  if ((await read($, pack)) !== id) await update($, pack, () => id)
-  return id
+type PackSettings = {
+  everyday: string
+  shuffleList: string[]
+  seasons: boolean
+  skipSeason?: string
+  lastShuffle?: string
 }
 
-function cancelSeasonTimer(): void {
-  seasonGen++
-  seasonTimer?.cancel()
-  seasonTimer = undefined
-}
+// Module scope is fine: session.start sets them again on every (re)load.
+let cfg: PackSettings = { everyday: OFF_SEASON, shuffleList: [], seasons: true }
+// This session's shuffle pick: made at session.start or by `shuffle`, never by a new flow or a redraw.
+let shuffled: string | undefined
 
-// One timer for the next day the seasonal answer could change, capped at a day in case a
-// long wait is clamped; on firing it re-resolves and re-arms. Nothing runs per render or tick.
-async function armSeasonTimer($: EngineInterface): Promise<void> {
-  cancelSeasonTimer()
-  if (mode !== AUTO) return
-  const gen = seasonGen
-  const at = await $.clock.now()
-  const ms = Math.max(1000, Math.min(DAY, nextChangeAt(new Date(at)).getTime() - at))
-  seasonTimer = $.clock.after(ms, () => {
-    if (gen !== seasonGen) return
-    seasonTimer = undefined
-    void (async () => {
-      await applyMode($)
-      if (gen === seasonGen) await armSeasonTimer($)
-    })()
-  })
-}
+const everydayOf = (v: unknown): string | undefined => (v === SHUFFLE || (typeof v === 'string' && isRegistered(v)) ? v : undefined)
 
-// Resolves the mode and the active pack at session.start. Returns the active pack's id.
-export async function loadActivePack($: EngineInterface, option: unknown): Promise<string> {
-  let stored: unknown
+async function storeGet($: EngineInterface, key: string): Promise<unknown> {
   try {
-    stored = await $.store.get('pack')
+    return await $.store.get(key)
   } catch {
-    // No store: fall through to the option.
+    return undefined
   }
-  mode = modeOf(stored) ?? modeOf(option) ?? AUTO
-  const id = await applyMode($)
+}
+
+async function storeSet($: EngineInterface, key: string, value: unknown): Promise<void> {
+  try {
+    if (value === undefined) await $.store.delete(key)
+    else await $.store.set(key, value as never)
+  } catch {
+    // No store: the change still holds for this session.
+  }
+}
+
+async function resolveNow($: EngineInterface): Promise<Resolved & { now: Date }> {
+  const now = new Date(await $.clock.now())
+  return { now, ...resolveShowing({ now, ...cfg, shuffled, registered: packIds(), fallback: DEFAULT_PACK, random: Math.random }) }
+}
+
+// The pack that shows now, with this session's shuffle pick (never a new one); writes the
+// atom only when the id changes. Run at session start, on a settings change and on a new flow.
+async function applyPack($: EngineInterface): Promise<Resolved & { now: Date }> {
+  const r = await resolveNow($)
+  if ((await read($, pack)) !== r.id) await update($, pack, () => r.id)
+  return r
+}
+
+// A fresh shuffle pick, remembered so the next one differs.
+async function shuffleNow($: EngineInterface): Promise<string> {
+  shuffled = pickShuffle({ shuffleList: cfg.shuffleList, registered: packIds(), lastShuffle: cfg.lastShuffle, random: Math.random })
+  cfg.lastShuffle = shuffled
+  await storeSet($, 'lastShuffle', shuffled)
+  return shuffled
+}
+
+// Resolves the settings and the pack that shows at session.start. Returns that pack's id.
+export async function loadActivePack($: EngineInterface, options: { pack?: unknown; seasons?: unknown }): Promise<string> {
+  goneNote = ''
+  let gone = ''
+  // Before 0.3.0 the store key `pack` held the mode: `auto`, or a pinned id. A pin becomes the
+  // everyday pack with seasons on; `auto` leaves the options in charge. Then the key goes.
+  const legacy = await storeGet($, 'pack')
+  if (legacy !== undefined) {
+    if (typeof legacy === 'string' && legacy && legacy !== AUTO) {
+      if (isRegistered(legacy)) {
+        await storeSet($, 'everyday', legacy)
+        await storeSet($, 'seasons', true)
+      } else gone = legacy
+    }
+    await storeSet($, 'pack', undefined)
+  }
+
+  const everyday = await storeGet($, 'everyday')
+  if (typeof everyday === 'string' && everyday && !everydayOf(everyday)) gone = everyday
+  const seasons = await storeGet($, 'seasons')
+  const list = await storeGet($, 'shuffleList')
+  const skip = await storeGet($, 'skipSeason')
+  const last = await storeGet($, 'lastShuffle')
+  cfg = {
+    // A legacy option value `auto` is not an id: it reads as the default.
+    everyday: everydayOf(everyday) ?? everydayOf(options.pack) ?? OFF_SEASON,
+    seasons: typeof seasons === 'boolean' ? seasons : options.seasons !== 'off' && options.seasons !== false,
+    shuffleList: Array.isArray(list) ? list.filter((x): x is string => typeof x === 'string') : [],
+    skipSeason: typeof skip === 'string' && skip ? skip : undefined,
+    lastShuffle: typeof last === 'string' && last ? last : undefined,
+  }
+
+  // A skip whose season is over is cleared.
+  const r0 = await resolveNow($)
+  if (cfg.skipSeason && !r0.isSkipped) {
+    cfg.skipSeason = undefined
+    await storeSet($, 'skipSeason', undefined)
+  }
+  shuffled = undefined
+  if (cfg.everyday === SHUFFLE) await shuffleNow($)
+
+  const r = await applyPack($)
   // A stored id whose pack is no longer registered: said once, in the next list reply.
-  goneNote = typeof stored === 'string' && stored && !modeOf(stored) ? `stored pack "${stored}" is gone; using ${id}` : ''
-  await armSeasonTimer($)
-  return id
+  if (gone) goneNote = `stored pack "${gone}" is gone; using ${r.id}`
+  return r.id
 }
 
 // Set by loadActivePack, cleared by the first list reply that carries it.
@@ -882,24 +980,29 @@ let goneNote = ''
 
 const PACKS_PANE = 'relay-packs'
 
-// The mode line that heads every list reply.
-async function modeLine($: EngineInterface): Promise<string> {
-  const active = await read($, pack)
-  if (mode !== AUTO) return `mode: pinned to ${active} (/relay-pack auto to follow the seasons)`
-  const now = new Date(await $.clock.now())
-  const season = seasonAt(now)
-  let line = `mode: auto (seasonal), now ${active}`
-  if (season && season.id === active) line += ` until ${monthDay(new Date(now.getFullYear(), season.to[0] - 1, season.to[1]))}`
-  const next = nextSeasonAt(now, isRegistered)
-  if (next && next.id !== active) line += `; ${next.id} from ${monthDay(next.from)}`
-  return line
+// The settings line that heads every list reply:
+// `everyday: cats · seasons on · showing: cats · next: turkeys Nov 15`.
+async function settingsLine($: EngineInterface): Promise<string> {
+  const r = await resolveNow($)
+  const candidates = shuffleCandidates(cfg.shuffleList, packIds())
+  const parts = [
+    `everyday: ${cfg.everyday === SHUFFLE ? `shuffle (${candidates.length ? candidates.join(', ') : 'none'})` : cfg.everyday}`,
+    cfg.seasons ? 'seasons on' : 'seasons off',
+    `showing: ${r.id}`,
+  ]
+  if (r.isSkipped && r.season) parts.push(`${r.season.id} skipped until ${monthDay(seasonEndAt(r.season, r.now))}`)
+  if (cfg.seasons) {
+    const next = nextSeasonAt(r.now, isRegistered)
+    if (next) parts.push(`next: ${next.id} ${monthDay(next.from)}`)
+  }
+  return parts.join(' · ')
 }
 
-// The mode, then every registered pack, one line each, the active one marked.
+// The settings, then every registered pack, one line each, the one showing marked.
 async function packList($: EngineInterface): Promise<string> {
   const active = await read($, pack)
   const lines = PACKS.map(p => `${p.id}: ${p.name} (${p.variants.length} variants)${p.id === active ? ' (active)' : ''}`)
-  lines.unshift(await modeLine($))
+  lines.unshift(await settingsLine($))
   if (goneNote) {
     lines.unshift(goneNote)
     goneNote = ''
@@ -907,25 +1010,87 @@ async function packList($: EngineInterface): Promise<string> {
   return lines.join('\n')
 }
 
-// The one way the mode changes: `auto` or a pack id to pin. Stored for later sessions,
-// and the atom the band, the panel and the gallery read, so they redraw at once.
-// An unknown id writes nothing.
-async function setActivePack($: EngineInterface, id: string): Promise<{ ok: boolean; text: string }> {
-  const next = modeOf(id)
-  if (!next) return { ok: false, text: `unknown pack "${id}"; valid ids: ${[AUTO, ...packIds()].join(', ')}` }
-  try {
-    await $.store.set('pack', next)
-  } catch {
-    // No store: the swap still holds for this session.
+type Reply = { ok: boolean; text: string }
+
+// Picking an everyday pack while a season shows skips that season, so the pick shows now.
+// Returns the reply's tail: `; Christmas skipped until Dec 31`, or ''.
+async function skipShowingSeason($: EngineInterface, before: Resolved & { now: Date }, id?: string): Promise<string> {
+  const season: Season | undefined = before.isSeasonal ? before.season : undefined
+  if (!season || season.id === id) return ''
+  cfg.skipSeason = seasonKey(season, before.now)
+  await storeSet($, 'skipSeason', cfg.skipSeason)
+  return `; ${resolvePack(season.id).name} skipped until ${monthDay(seasonEndAt(season, before.now))}`
+}
+
+// Everything that changes the settings ends here: the atom the band, the panel and the
+// gallery read, and the gallery's labels.
+async function settled($: EngineInterface): Promise<Resolved & { now: Date }> {
+  const r = await applyPack($)
+  $.ui.invalidate('ui.render')
+  return r
+}
+
+// A fixed everyday pack. Any registered id, holiday packs included.
+async function setEveryday($: EngineInterface, id: string): Promise<Reply> {
+  if (!isRegistered(id)) return { ok: false, text: `unknown pack "${id}"; valid ids: ${[...packIds(), SHUFFLE, AUTO].join(', ')}` }
+  const before = await resolveNow($)
+  cfg.everyday = id
+  shuffled = undefined
+  await storeSet($, 'everyday', id)
+  const skipped = await skipShowingSeason($, before, id)
+  const r = await settled($)
+  const name = resolvePack(r.id).name
+  return { ok: true, text: skipped ? `ok: ${name} now${skipped}` : `ok: everyday pack is ${name}` }
+}
+
+// Shuffle the everyday pack among `ids` (none = every non-holiday pack), with a fresh pick now.
+async function setShuffle($: EngineInterface, ids: readonly string[]): Promise<Reply> {
+  const valid = shuffleCandidates([], packIds())
+  const bad = ids.filter(id => !valid.includes(id))
+  if (bad.length) {
+    const why = bad.map(id => `"${id}" (${isHoliday(id) && isRegistered(id) ? 'holiday pack' : 'unknown'})`).join(', ')
+    return { ok: false, text: `cannot shuffle ${why}; valid ids: ${valid.join(', ')}` }
   }
-  const changed = next !== mode
-  mode = next
-  const active = await applyMode($)
-  await armSeasonTimer($)
-  // The gallery's "seasonal" label follows the mode even when the pack stays the same.
-  if (changed) $.ui.invalidate('ui.render')
-  const name = resolvePack(active).name
-  return { ok: true, text: next === AUTO ? `ok: following the seasons; active pack is ${name}` : `ok: active pack is ${name}` }
+  const before = await resolveNow($)
+  cfg.everyday = SHUFFLE
+  cfg.shuffleList = [...new Set(ids)]
+  await storeSet($, 'everyday', SHUFFLE)
+  await storeSet($, 'shuffleList', cfg.shuffleList)
+  await shuffleNow($)
+  const skipped = await skipShowingSeason($, before)
+  const r = await settled($)
+  return { ok: true, text: `ok: shuffling ${shuffleCandidates(cfg.shuffleList, packIds()).join(', ')}; ${resolvePack(r.id).name} now${skipped}` }
+}
+
+// Seasons on or off. Turning them on also lifts a skip, so a season holding now shows again.
+async function setSeasons($: EngineInterface, on: boolean): Promise<Reply> {
+  cfg.seasons = on
+  await storeSet($, 'seasons', on)
+  if (on && cfg.skipSeason) {
+    cfg.skipSeason = undefined
+    await storeSet($, 'skipSeason', undefined)
+  }
+  const r = await settled($)
+  return { ok: true, text: `ok: seasons ${on ? 'on' : 'off'}; showing ${resolvePack(r.id).name}` }
+}
+
+// The words /relay-pack and the tool's `set` take: a pack id, `shuffle`, or `auto` (seasons on).
+async function setByWord($: EngineInterface, word: string): Promise<Reply> {
+  if (word === AUTO) return setSeasons($, true)
+  if (word === SHUFFLE) return setShuffle($, [])
+  return setEveryday($, word)
+}
+
+// The gallery's labels for one card.
+function cardLabels(p: Pack, active: string): CardLabel[] {
+  const s = tr()
+  const labels: CardLabel[] = []
+  const season = SEASONS_BY_ID.get(p.id)
+  if (season) labels.push({ text: `${s.holiday} · ${seasonDates(season.from, season.to)}`, isOn: false })
+  const everyday = cfg.everyday === SHUFFLE ? shuffled : cfg.everyday
+  if (p.id === everyday) labels.push({ text: s.everyday, isOn: false })
+  if (p.id === active) labels.push({ text: s.showing, isOn: true })
+  return labels
 }
 
 async function openGallery($: EngineInterface): Promise<string> {
@@ -937,7 +1102,7 @@ export const register: Register = (on, options) => {
   on('session.start', async ($, e, next) => {
     const started = await next(e)
     lang = await detectLang($, options.language)
-    await loadActivePack($, options.pack)
+    await loadActivePack($, { pack: options.pack, seasons: options.seasons })
     await $.tool.register({
       name: 'progress',
       description:
@@ -996,21 +1161,28 @@ export const register: Register = (on, options) => {
       name: 'pack',
       description:
         'List, preview or switch the sprite pack drawn in the relay agents panel and the progress bar. ' +
-        '`list`: the mode (auto follows the seasons, or pinned) and the registered packs, the active one marked. ' +
-        '`set` with `id`: pin that pack (the band and panel redraw at once); `id: "auto"` follows the seasons again. ' +
+        'The everyday pack shows all year; with seasons on, holiday packs (turkeys Nov 15-30, christmas in December) replace it. ' +
+        '`list`: the settings line (everyday pack, seasons, what shows now, the next season), then the packs, the one showing marked. ' +
+        '`set` with `id`: make that pack the everyday pack (it shows at once; during a season that season is skipped this year); ' +
+        '`id: "shuffle"` shuffles every non-holiday pack; `id: "auto"` turns seasons on. ' +
+        '`shuffle` with optional `ids`: a random everyday pack each session, from those ids (default: every non-holiday pack). ' +
+        '`seasons` with `on`: holiday packs on or off. ' +
         '`preview`: open a gallery pane showing every pack.',
       inputSchema: {
         type: 'object',
         properties: {
-          action: { type: 'string', enum: ['list', 'set', 'preview'] },
-          id: { type: 'string', description: 'For `set`: a pack id as `list` prints it, or `auto` to follow the seasons.' },
+          action: { type: 'string', enum: ['list', 'set', 'shuffle', 'seasons', 'preview'] },
+          id: { type: 'string', description: 'For `set`: a pack id as `list` prints it, `shuffle`, or `auto` (seasons on).' },
+          ids: { type: 'array', items: { type: 'string' }, description: 'For `shuffle`: non-holiday pack ids to shuffle; empty or left out = all of them.' },
+          on: { type: 'boolean', description: 'For `seasons`: true shows holiday packs in season, false keeps the everyday pack all year.' },
         },
         required: ['action'],
       },
     })
     await $.command.register({
       name: 'relay-pack',
-      description: 'List the sprite packs, pin one with /relay-pack <id>, follow the seasons with /relay-pack auto, or open the gallery with /relay-pack preview',
+      description:
+        'List the sprite packs, set the everyday pack with /relay-pack <id>, shuffle with /relay-pack shuffle [ids], turn holiday packs on or off with /relay-pack seasons on|off, or open the gallery with /relay-pack preview',
     })
 
     // Ticks the running agents' clocks; quiet when nothing runs.
@@ -1041,19 +1213,33 @@ export const register: Register = (on, options) => {
     const arg = (e.args ?? '').trim()
     if (!arg || arg === 'list') return { text: await packList($) }
     if (arg === 'preview') return { text: await openGallery($) }
-    const r = await setActivePack($, arg)
-    return { text: r.text }
+    const [word = '', ...rest] = arg.split(/[\s,]+/).filter(Boolean)
+    if (word === 'shuffle') return { text: (await setShuffle($, rest)).text }
+    if (word === 'seasons') {
+      if (rest.length === 1 && (rest[0] === 'on' || rest[0] === 'off')) return { text: (await setSeasons($, rest[0] === 'on')).text }
+      return { text: 'usage: /relay-pack seasons on|off' }
+    }
+    return { text: (await setByWord($, arg)).text }
   })
 
   on('tool.call', { tool: PACK_TOOL }, async ($, e) => {
-    const input = e as unknown as { action?: string; id?: string }
+    const input = e as unknown as { action?: string; id?: string; ids?: unknown; on?: unknown }
     if (input.action === 'list') return { result: await packList($) }
     if (input.action === 'preview') return { result: await openGallery($) }
-    if (input.action === 'set') {
-      const r = await setActivePack($, String(input.id ?? '').trim())
-      return r.ok ? { result: r.text } : { deny: r.text }
+    let r: Reply | undefined
+    if (input.action === 'set') r = await setByWord($, String(input.id ?? '').trim())
+    if (input.action === 'shuffle') {
+      const ids = Array.isArray(input.ids) ? input.ids.map(x => String(x).trim()).filter(Boolean) : []
+      r = await setShuffle($, ids)
     }
-    return { deny: `unknown action "${String(input.action)}"; use list, set or preview` }
+    if (input.action === 'seasons') {
+      const isOn = input.on === true || input.on === 'on' || input.on === 'true'
+      const isOff = input.on === false || input.on === 'off' || input.on === 'false'
+      if (!isOn && !isOff) return { deny: 'seasons needs `on`: true or false' }
+      r = await setSeasons($, isOn)
+    }
+    if (!r) return { deny: `unknown action "${String(input.action)}"; use list, set, shuffle, seasons or preview` }
+    return r.ok ? { result: r.text } : { deny: r.text }
   })
 
   on('ui.render', { component: 'Pane', requestId: PACKS_PANE }, async ($, e) => {
@@ -1061,8 +1247,9 @@ export const register: Register = (on, options) => {
     const ui = $.ui.resolve(e)
     const { Box, Text, Button } = ui
     const active = resolvePack(await read($, pack)).id
-    const activeLabel = mode === AUTO ? s.activeSeasonal : s.active
-    const use = (p: Pack) => <Button key={`use-${p.id}`} label={s.use} onPress={() => void setActivePack($, p.id)} />
+    // Use sets the everyday pack: on every card but the fixed everyday one.
+    const hasUse = (p: Pack) => p.id !== cfg.everyday
+    const use = (p: Pack) => <Button key={`use-${p.id}`} label={s.use} onPress={() => void setEveryday($, p.id)} />
     const align = isRtl() ? 'flex-end' : undefined
 
     if (e.surface !== 'terminal' && 'Svg' in ui) {
@@ -1070,31 +1257,42 @@ export const register: Register = (on, options) => {
       const W = Math.max(240, Math.min(900, (e.props.bodyColumns || 40) * 8 - 8))
       return (
         <Box flexDirection="column" gap={1} alignItems={align}>
-          {PACKS.map(p => (
-            <Box key={p.id} flexDirection="column" gap={1} alignItems={align}>
-              <Svg
-                key={`card-${p.id}`}
-                source={packCardSvg(p, W, p.id === active, activeLabel)}
-                alt={`${p.name}: ${s.variants(p.variants.length)}${p.id === active ? `, ${activeLabel}` : ''}`}
-                width={W}
-                height={CARD_H}
-              />
-              {p.id !== active && use(p)}
-            </Box>
-          ))}
+          {PACKS.map(p => {
+            const labels = cardLabels(p, active)
+            return (
+              <Box key={p.id} flexDirection="column" gap={1} alignItems={align}>
+                <Svg
+                  key={`card-${p.id}`}
+                  source={packCardSvg(p, W, labels)}
+                  alt={`${p.name}: ${s.variants(p.variants.length)}${labels.length ? `, ${labelText(labels)}` : ''}`}
+                  width={W}
+                  height={CARD_H}
+                />
+                {hasUse(p) && use(p)}
+              </Box>
+            )
+          })}
         </Box>
       )
     }
 
     return (
       <Box flexDirection="column" gap={1}>
-        {PACKS.map(p => (
-          <Box key={p.id} flexDirection="row" gap={1}>
-            <Text bold>{p.name}</Text>
-            <Text dimColor>{s.variants(p.variants.length)}</Text>
-            {p.id === active ? <Text color={DONE}>{activeLabel}</Text> : use(p)}
-          </Box>
-        ))}
+        {PACKS.map(p => {
+          const labels = cardLabels(p, active)
+          return (
+            <Box key={p.id} flexDirection="row" gap={1}>
+              <Text bold>{p.name}</Text>
+              <Text dimColor>{s.variants(p.variants.length)}</Text>
+              {labels.map(l => (
+                <Text key={l.text} color={l.isOn ? DONE : undefined} dimColor={!l.isOn}>
+                  {l.text}
+                </Text>
+              ))}
+              {hasUse(p) && use(p)}
+            </Box>
+          )
+        })}
       </Box>
     )
   })
@@ -1105,10 +1303,15 @@ export const register: Register = (on, options) => {
     if (e.agentId) return { result: 'ignored: only the main session reports the flow' }
     const input = e as unknown as ProgressInput
     const prev = await read($, flow)
-    if (isNewFlow(prev, input) && input.title !== undefined) {
+    const isNew = isNewFlow(prev, input)
+    if (isNew && input.title !== undefined) {
       // A new flow starts with a clean list; agents still running stay.
       await update($, agents, list => list.filter(a => a.status === 'running'))
     }
+    // A new flow is the one other moment the date is checked: a season that began since
+    // session start shows now. No new shuffle pick; the same flow's later calls do not re-resolve.
+    // A clock or store that fails keeps the pack showing: the report itself must still land.
+    if (isNew) await applyPack($).catch(() => undefined)
     const next = await update($, flow, p => merge(p, input))
     if (next && input.tasks?.length) await autoOpen($, next.title)
     return { result: `ok: ${label(next ?? blank())}` }

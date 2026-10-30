@@ -54,7 +54,7 @@ test('christmas: every role, tier and variant draws a scoped group inside the gr
 test('christmas: the accent sits on every character, in its collar spot, and the tier changes nothing else', () => {
   for (const role of ROLES)
     for (const variant of christmas.variants) {
-      const a = christmas.draw(0, 0, { role, tier: 'fable' }, { variant, accent: ACCENT })
+      const a = christmas.draw(0, 0, { role, tier: 'expert' }, { variant, accent: ACCENT })
       const b = christmas.draw(0, 0, { role, tier: 'light' }, { variant, accent: ACCENT })
       expect(a).toBe(b)
       expect(a).toContain(ACCENT)

@@ -52,7 +52,7 @@ test('dogs: every role and breed draws inside the grid with the accent collar', 
 
 test('dogs: tier does not change the drawing', () => {
   const o = { variant: 'husky', accent: ACCENT }
-  expect(dogs.draw(0, 0, { role: 'developer', tier: 'fable' }, o)).toBe(dogs.draw(0, 0, { role: 'developer', tier: 'light' }, o))
+  expect(dogs.draw(0, 0, { role: 'developer', tier: 'expert' }, o)).toBe(dogs.draw(0, 0, { role: 'developer', tier: 'light' }, o))
 })
 
 test('dogs: placement, mirror, dim, walking and fallbacks', () => {

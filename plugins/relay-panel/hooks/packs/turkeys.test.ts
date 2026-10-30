@@ -74,7 +74,7 @@ test('turkeys: the ribbon sits in the same place on every costume', () => {
 
 test('turkeys: tier does not change the drawing', () => {
   const o = { variant: 'narragansett', accent: ACCENT }
-  for (const tier of TIERS) expect(turkeys.draw(0, 0, { role: 'developer', tier }, o)).toBe(turkeys.draw(0, 0, { role: 'developer', tier: 'fable' }, o))
+  for (const tier of TIERS) expect(turkeys.draw(0, 0, { role: 'developer', tier }, o)).toBe(turkeys.draw(0, 0, { role: 'developer', tier: 'expert' }, o))
 })
 
 test('turkeys: unknown role, tier and variant fall back without throwing', () => {

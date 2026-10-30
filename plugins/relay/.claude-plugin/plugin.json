@@ -1,6 +1,6 @@
 {
   "name": "relay",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Orchestrated delivery flow: the session model plans, owns design and reviews; five tiered relay worker subagents implement. Pairs with the relay-panel mod for a live progress bar and agents panel. Forked from savvy-flow in johnnyvizz/claude-kit.",
   "author": { "name": "Tommy Liang" },
   "license": "MIT",

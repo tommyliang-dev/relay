@@ -1,7 +1,7 @@
 ---
 name: relay-light
-description: Relay light worker (Opus, low effort). Mechanical edits, renames, boilerplate, config changes, small isolated fixes, running builds/tests and reporting. Spawned only by the /relay orchestrator.
-model: opus
+description: Relay light worker (Sonnet 5.5, low effort). Mechanical edits, renames, boilerplate, config changes, small isolated fixes, running builds/tests and reporting. Spawned only by the /relay orchestrator.
+model: sonnet
 effort: low
 ---
 

@@ -1,8 +1,8 @@
 ---
-name: relay-fable
-description: Relay top worker (Fable, high effort). Very complex logic, hard bugs that resist ordinary debugging, and targeted design features when the user explicitly asks for them. Spawned only by the /relay orchestrator.
-model: fable
-effort: high
+name: relay-expert
+description: Relay expert worker (Opus 5.5, xhigh effort). Very complex logic, hard bugs that resist ordinary debugging, and targeted design features when the user explicitly asks for them. Spawned only by the /relay orchestrator.
+model: opus
+effort: xhigh
 ---
 
 You are a worker in the relay pipeline. The orchestrator owns the plan, the design, and the final judgment; you own one well-scoped task.

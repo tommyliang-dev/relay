@@ -16,13 +16,13 @@ If the arguments are empty, the task is whatever the user just asked in this con
 
 - Orchestrate changes across several files or packages, new features, refactors, root-cause debugging, wide searches, and work that ends in a build or test run. Answer questions, explanations, quick lookups and edits a handful of tool calls can finish directly: a worker's startup cost exceeds the work.
 - The flow is designed for a strong orchestrator model at high effort (Fable high is the reference setup). Do not try to detect the session's model or effort. Whatever the session runs on is the user's choice; just orchestrate.
-- Worker agents must exist: `relay-fable`, `relay-heavy`, `relay-careful`, `relay-medium`, `relay-light` (in `~/.claude/agents/`, or shipped with the relay plugin, in which case the Agent tool lists them as `relay:relay-careful` and so on). If the Agent tool does not list them, stop and tell the user.
+- Worker agents must exist: `relay-expert`, `relay-heavy`, `relay-careful`, `relay-medium`, `relay-light` (in `~/.claude/agents/`, or shipped with the relay plugin, in which case the Agent tool lists them as `relay:relay-careful` and so on). If the Agent tool does not list them, stop and tell the user.
 - A repo's own CLAUDE.md or AGENTS.md wins over this skill. Copy the rules that matter (path scoping, package manager, no-worktrees, lint or design rules) into every worker brief.
 
 ## Progress bar
 
 If `mcp__relay-panel__progress` appears among your tools, including as a deferred tool, it is available: load a deferred tool first with ToolSearch (`select:mcp__relay-panel__progress`). Keep it current; skip silently only if the tool is absent or ToolSearch does not find it. Call it:
-- after presenting the plan: `title` (a few words), `total` (number of worker tasks), `tasks` (`[{ title, tier, after }]` in plan order; `tier` without the `relay-` prefix, `after` the numbers of the tasks it waits for, matching the real dependency graph), `phase: "delegate"` (or `"design"` while in section 2);
+- after presenting the plan: `title` (a few words), `total` (number of worker tasks), `tasks` (`[{ title, tier, after }]` in plan order; `tier` without the `relay-` prefix (`light`, `medium`, `careful`, `heavy`, `expert`), `after` the numbers of the tasks it waits for, matching the real dependency graph), `phase: "delegate"` (or `"design"` while in section 2);
 - each time a task is accepted: `done` (accepted so far);
 - during the final gate: `phase: "review"`;
 - if re-planning changes the tasks: the new `tasks` and `total`;
@@ -62,7 +62,7 @@ Design decisions are yours. Workers never invent UI, with one exception below.
 - **Small or contained UI** (a component, a state, a screen tweak): decide the design and write it into the brief as concrete specs (structure, states, spacing and typography rules, which existing components to reuse).
 - **When the user should see it before code** (new screen, flow, anything ambiguous): show it in chat with the `visualize` widget and get a reaction before delegating.
 - **Bigger or exploratory design** (new screens or flows, landing pages, variants): run the `design` skill for a canvas, let the user pick, then turn the chosen artboards into briefs.
-- **Delegated design feature (only when the user explicitly asks)**: one targeted feature (a component, interaction, animation or visual detail) may go to `relay-fable`. The brief states what may change, which components and tokens to stay consistent with, and what is out of scope. You still review the visual result and own acceptance.
+- **Delegated design feature (only when the user explicitly asks)**: one targeted feature (a component, interaction, animation or visual detail) may go to `relay-expert`. The brief states what may change, which components and tokens to stay consistent with, and what is out of scope. You still review the visual result and own acceptance.
 - For frontend styling direction, consult `frontend-design`. For any chart, consult `dataviz` first.
 - After implementation, review the visual result yourself (preview, screenshot or simulator). A worker's "done" does not close a design task.
 
@@ -72,15 +72,40 @@ Design decisions are yours. Workers never invent UI, with one exception below.
 
 | Tier | Agent | Model / effort | Use for |
 |------|-------|----------------|---------|
-| Light | `relay-light` | Opus / low | Mechanical edits, renames, config, boilerplate, small isolated fixes, running builds or tests |
-| Medium (default) | `relay-medium` | Opus / medium | Standard feature or fix with a known cause, a few files |
-| Careful | `relay-careful` | Opus / high | Delicate multi-file change: invariants, many edge cases, concurrency |
-| Heavy | `relay-heavy` | Opus / xhigh | Unfamiliar code, unclear root cause, non-obvious architecture: investigate, then hand a brief to implement |
-| Fable | `relay-fable` | Fable / high | Reserve tier: hardest logic, bugs that survived Heavy; design features only when the user asks (section 2) |
+| Light | `relay-light` | Sonnet / low | Mechanical edits, renames, config, boilerplate, small isolated fixes, running builds or tests |
+| Medium (default) | `relay-medium` | Sonnet / medium | Standard feature or fix with a known cause, a few files |
+| Careful | `relay-careful` | Sonnet / high | Delicate multi-file change: invariants, many edge cases, concurrency |
+| Heavy | `relay-heavy` | Opus / high | Unfamiliar code, unclear root cause, non-obvious architecture: investigate, then hand a brief to implement |
+| Expert | `relay-expert` | Opus / xhigh | Reserve tier: hardest logic, bugs that survived Heavy; design features only when the user asks (section 2) |
 
 - Heavy vs Careful is the kind of difficulty, not the amount: insight needed means Heavy, thoroughness needed means Careful. A task that needs both is two tasks: Heavy investigates and writes a precise brief, Careful implements it.
-- Pick Fable only when a task clearly meets its criteria.
+- Expert is the reserve tier: pick it only when a task clearly meets its criteria.
 - Never delegate final judgment (section 5) to any tier.
+
+### Models
+
+If the user's CLAUDE.md has a `## Relay models` block, pass its model and effort for that tier on every Agent call (`model`, `effort` parameters); that block is the user's explicit instruction to set them. Otherwise pass neither and the worker's own defaults apply. If the account cannot use a listed model, fall back to the default for that tier and say so once.
+
+Block format:
+
+```
+## Relay models
+- light: sonnet, low
+- medium: sonnet, medium
+- careful: sonnet, high
+- heavy: opus, high
+- expert: opus, xhigh
+```
+
+Presets (exact models as of October 2026):
+
+| Tier | Default (no block needed) | Baller | Budget |
+|------|---------------------------|--------|--------|
+| light | sonnet, low (Sonnet 5.5) | opus, low (Opus 5.5) | haiku, low (Haiku 5.5) |
+| medium | sonnet, medium (Sonnet 5.5) | opus, medium (Opus 5.5) | haiku, medium (Haiku 5.5) |
+| careful | sonnet, high (Sonnet 5.5) | opus, high (Opus 5.5) | sonnet, medium (Sonnet 5.5) |
+| heavy | opus, high (Opus 5.5) | opus, xhigh (Opus 5.5) | sonnet, high (Sonnet 5.5) |
+| expert | opus, xhigh (Opus 5.5) | fable, xhigh (Fable 5.1, needs Fable access) | opus, high (Opus 5.5) |
 
 ## 4. Delegate
 

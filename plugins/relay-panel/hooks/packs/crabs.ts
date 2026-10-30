@@ -40,10 +40,10 @@ const CRAB_CSS = `<style>
 .p-crabs .run g{transform-box:fill-box}
 @keyframes crabs-st{50%{transform:translateY(-1px)}}
 @keyframes crabs-bob{50%{transform:translateY(1px)}}
-.p-crabs .c-fable.run{animation:crabs-float 1s ease-in-out infinite}
-.p-crabs .c-fable.run .la,.p-crabs .c-fable.run .lb,.p-crabs .c-fable.run .bd{animation:none}
-.p-crabs .c-fable.run .ant{animation:crabs-blink 1s steps(1) infinite}
-.p-crabs .c-fable.run .star{animation:crabs-blink .5s steps(1) infinite -.25s}
+.p-crabs .c-expert.run{animation:crabs-float 1s ease-in-out infinite}
+.p-crabs .c-expert.run .la,.p-crabs .c-expert.run .lb,.p-crabs .c-expert.run .bd{animation:none}
+.p-crabs .c-expert.run .ant{animation:crabs-blink 1s steps(1) infinite}
+.p-crabs .c-expert.run .star{animation:crabs-blink .5s steps(1) infinite -.25s}
 @keyframes crabs-float{50%{transform:translateY(-2px)}}
 @keyframes crabs-blink{50%{opacity:.15}}
 .p-crabs .c-heavy.run .it{animation:crabs-scan 1s steps(1) infinite}
@@ -65,8 +65,8 @@ const CRAB_CSS = `<style>
 </style>`
 
 const COSTUMES: Record<string, (f: Fill, t: string) => void> = {
-  // Fable: astronaut in a glass dome; floats instead of walking, the antenna and the star blink.
-  fable: (f, t) => {
+  // Expert: astronaut in a glass dome; floats instead of walking, the antenna and the star blink.
+  expert: (f, t) => {
     crabBody(f)
     f(6, 7, 18, 1, '#E6E8EE'); f(5, 8, 1, 14, '#E6E8EE'); f(24, 8, 1, 14, '#E6E8EE'); f(6, 22, 18, 1, '#C9CCD2')
     f(6, 8, 18, 14, 'rgba(169,214,245,.32)'); f(8, 9, 2, 1, '#fff'); f(8, 10, 1, 2, '#fff')
@@ -114,8 +114,12 @@ const COSTUMES: Record<string, (f: Fill, t: string) => void> = {
 export const COSTUME_NAMES: readonly string[] = Object.keys(COSTUMES)
 
 // Crabs dress by tier; an explore task wears the pirate whatever its tier.
-export const costumeOf = (who: { role: Role; tier: Tier }): string =>
-  who.role === 'explore' ? 'explore' : Object.prototype.hasOwnProperty.call(COSTUMES, who.tier) ? who.tier : 'other'
+// `fable` is the expert tier's former name (alias) and wears the astronaut too.
+export const costumeOf = (who: { role: Role; tier: Tier }): string => {
+  if (who.role === 'explore') return 'explore'
+  const tier: string = who.tier === ('fable' as string) ? 'expert' : who.tier
+  return Object.prototype.hasOwnProperty.call(COSTUMES, tier) ? tier : 'other'
+}
 
 // Body and props nest inside `bd` so a prop rides the bob and adds its own motion;
 // legs stay outside it and step on their own.

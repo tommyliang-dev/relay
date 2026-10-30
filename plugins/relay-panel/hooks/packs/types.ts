@@ -2,10 +2,11 @@
 // the panel draws only through the registry in ./index.ts.
 
 export type Role = 'orchestrator' | 'planner' | 'architect' | 'developer' | 'designer' | 'explore' | 'other'
-export type Tier = 'fable' | 'heavy' | 'careful' | 'medium' | 'light' | 'other'
+// `expert` is the top tier, formerly `fable`; register.tsx and crabs.ts still accept that alias.
+export type Tier = 'expert' | 'heavy' | 'careful' | 'medium' | 'light' | 'other'
 
 export const ROLES: readonly Role[] = ['orchestrator', 'planner', 'architect', 'developer', 'designer', 'explore', 'other']
-export const TIERS: readonly Tier[] = ['fable', 'heavy', 'careful', 'medium', 'light', 'other']
+export const TIERS: readonly Tier[] = ['expert', 'heavy', 'careful', 'medium', 'light', 'other']
 
 export type DrawOptions = {
   variant: string // from pack.variantOf(taskKey)
