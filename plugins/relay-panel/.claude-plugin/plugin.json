@@ -1,6 +1,6 @@
 {
   "name": "relay-panel",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Progress bar above the prompt for /relay, plus an agents panel (/relay-agents) with swappable sprite packs: running, finished and planned subagents with model, task progress, context, cost and time. Forked from savvy-progress in johnnyvizz/claude-kit.",
   "author": { "name": "Tommy Liang" },
   "types": "./types/index.d.ts",
@@ -21,10 +21,17 @@
     },
     "pack": {
       "type": "string",
-      "title": "Sprite pack",
-      "description": "auto follows the seasons (crabs; turkeys Nov 15-30; Christmas in December); a pack id pins that pack. /relay-pack overrides it",
-      "default": "auto",
-      "options": ["auto", "cats", "crabs", "dogs", "turkeys", "christmas"]
+      "title": "Everyday pack",
+      "description": "The pack drawn all year, or shuffle for a random non-holiday pack each session. /relay-pack <id> or /relay-pack shuffle overrides it",
+      "default": "crabs",
+      "options": ["crabs", "cats", "dogs", "shuffle"]
+    },
+    "seasons": {
+      "type": "string",
+      "title": "Holiday packs",
+      "description": "on: turkeys Nov 15-30 and Christmas in December replace the everyday pack; off: the everyday pack all year. /relay-pack seasons on|off overrides it",
+      "default": "on",
+      "options": ["on", "off"]
     }
   },
   "license": "MIT"

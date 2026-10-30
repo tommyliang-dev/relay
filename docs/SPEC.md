@@ -22,7 +22,7 @@ The repo is a marketplace named `relay` with two plugins.
 | Thing | Stock | relay |
 |---|---|---|
 | Skill | `/savvy-flow` (manual only) | `/relay` (model-invocable, auto description from `savvy-flow-auto`) |
-| Workers | `savvy-light` … `savvy-fable` | `relay-light`, `relay-medium`, `relay-careful`, `relay-heavy`, `relay-fable` (agent type `relay:relay-light` etc.) |
+| Workers | `savvy-light` … `savvy-fable` | `relay-light`, `relay-medium`, `relay-careful`, `relay-heavy`, `relay-expert` (formerly `relay-fable`; agent type `relay:relay-light` etc.) |
 | Tools | `mcp__savvy-progress__progress`, `__step` | `mcp__relay-panel__progress`, `mcp__relay-panel__step`, `mcp__relay-panel__pack` |
 | Panel command | `/agents-info` | `/relay-agents` (`open` argument kept) |
 | Pack command | none | `/relay-pack` |
@@ -41,7 +41,7 @@ Each pack is one module under `plugins/relay-panel/hooks/packs/<id>.ts` exportin
 
 ```ts
 export type Role = 'orchestrator' | 'planner' | 'architect' | 'developer' | 'designer' | 'explore' | 'other'
-export type Tier = 'fable' | 'heavy' | 'careful' | 'medium' | 'light' | 'other'
+export type Tier = 'expert' | 'heavy' | 'careful' | 'medium' | 'light' | 'other' // expert: formerly fable
 
 export type DrawOptions = {
   variant: string     // from pack.variantOf(taskKey)
@@ -64,7 +64,7 @@ export type Pack = {
 }
 ```
 
-`who` carries both role and tier because the crabs dress by tier (astronaut fable, detective heavy, hard-hat careful, chef medium, racer light, pirate explore) while the cats dress by role. A pack uses whichever it wants.
+`who` carries both role and tier because the crabs dress by tier (astronaut expert, formerly fable; detective heavy, hard-hat careful, chef medium, racer light, pirate explore) while the cats dress by role. A pack uses whichever it wants.
 
 The registry `hooks/packs/index.ts` lists the packs. The panel draws through `activePack().draw(...)`, never a pack directly. CSS from every pack is scoped under its own `.p-<id>` class so two packs never collide in a gallery.
 
@@ -82,30 +82,52 @@ Adding a pack = one file + one line in the registry + its tests. No panel change
 
 ## Active pack: storage and redraw
 
-- **Mode**: `auto` (follow the seasons) or a pinned pack id. Read at `session.start` from the `$.store` key `pack` (persists across sessions, per plugin; written by the `pack` tool or `/relay-pack`), then the plugin option `pack` in `userConfig` (`auto` default, then the shipped pack ids; `/config` or `pluginConfigs.relay-panel.options.pack`). A missing or unknown value falls through; nothing valid means `auto`.
-- **Seasons** (`hooks/packs/seasons.ts`, local time, inclusive):
+Two settings and a shuffle option (since relay-panel 0.3.0; 0.2.x had one `auto` or pinned mode):
 
-  | Dates | Pack |
-  |---|---|
-  | Nov 15-30 | `turkeys` |
-  | Dec 1-31 | `christmas` |
-  | otherwise | `crabs` (`OFF_SEASON`, also `DEFAULT_PACK`) |
+- **Everyday pack**: a pack id, or `shuffle`. The `$.store` key `everyday`, then the plugin option `pack` ("Everyday pack": `crabs` default, `cats`, `dogs`, `shuffle`; a legacy `auto` reads as the default). Any registered id may be stored, holiday packs included (`/relay-pack turkeys` draws turkeys whenever no season shows).
+- **Seasons**: on or off. The store key `seasons` (boolean), then the option `seasons` (`on` default, `off`).
+- **Shuffle list**: the store key `shuffleList` (empty = every non-holiday pack).
+- **Skipped season**: the store key `skipSeason`, `'<seasonId>:<year the season starts>'` (`christmas:2026`), or absent. A key from a season that is over never matches; it is cleared at `session.start`.
+- **Last shuffle**: the store key `lastShuffle`, the previous pick.
 
-  A season whose pack is not registered draws `crabs`.
-- **Live**: session atom `{ plugin: 'relay-panel', key: 'pack' }` holds the active pack id, written only when it changes. The band and panel read it while drawing, so a write redraws both at once; no restart.
-- **Cost**: the pack is resolved once at `session.start`. In auto mode one `$.clock.after` timer waits for `nextChangeAt(now)` (local midnight of the next season start or the day after a season end), capped at 24 h; on firing it re-resolves, writes the atom if changed, and re-arms. Pinning cancels the timer; `auto` re-arms it. Nothing checks per render or per tick.
+The store wins over the options. All keys persist across sessions, per plugin, written by the `pack` tool, `/relay-pack` and the gallery.
+
+**Holiday packs** are the packs in `SEASONS` (`hooks/packs/seasons.ts`, local time, inclusive):
+
+| Dates | Pack |
+|---|---|
+| Nov 15-30 | `turkeys` |
+| Dec 1-31 | `christmas` |
+
+`OFF_SEASON` (`crabs`, also `DEFAULT_PACK`) is the fallback.
+
+**Resolution** (`resolvePack` in `seasons.ts`, pure, unit-tested):
+
+1. Seasons on, a season holds, its pack is registered, and `skipSeason` is not that season's key: the season's pack.
+2. Else the everyday pack: a registered id, else `OFF_SEASON`, else `DEFAULT_PACK`; `shuffle` draws the session's pick.
+
+**Shuffle pick**: made once per session at `session.start` (and by `shuffle`), never by a new flow or a redraw. Candidates: the shuffle list (or every registered pack), registered, minus holiday packs, in registry order. `lastShuffle` is left out while more than one candidate remains. `Math.random` picks; the pick is stored as `lastShuffle`. No candidates draws `OFF_SEASON`.
+
+**Picking a pack during a season**: when rule 1 is showing a season, setting the everyday pack (or shuffling) also stores that season's key in `skipSeason`, so the pick shows now and the season returns next year. Picking the season's own pack skips nothing. Turning seasons on lifts a skip.
+
+**Migration** (once, at `session.start`): the 0.2.x store key `pack`: `auto` sets nothing (the options apply); a registered id becomes `everyday` = that id with `seasons` = true; an unknown id is mentioned once. Then `pack` is deleted.
+
+- **Live**: session atom `{ plugin: 'relay-panel', key: 'pack' }` holds the id showing, written only when it changes. The band and panel read it while drawing, so a write redraws both at once; no restart.
+- **Cost**: checked at session start and when a new /relay plan starts (the `progress` call that starts a new flow: none before, the last one finished, or a new title). Each check re-resolves without a new shuffle and writes the atom only if the id changed; the same flow's later calls, and a worker's call, do not check. No timer; nothing checks per render or per tick.
 - Unknown stored id (pack removed): fall back to the option and say so once.
 
-Why not a settings key: writing `settings.json` from a mod is heavier, and the option already covers "set it in config".
+Why not a settings key: writing `settings.json` from a mod is heavier, and the options already cover "set it in config".
 
 ## Swapping packs
 
-- **Tool** `mcp__relay-panel__pack` `{ action: 'list' | 'set' | 'preview', id? }`:
-  - `list`: the mode first (`mode: auto (seasonal), now crabs; turkeys from Nov 15` or `mode: pinned to cats (/relay-pack auto to follow the seasons)`), then ids, names, variant count, which is active.
-  - `set`: validates; a pack id pins it, `auto` follows the seasons. Writes store + atom, returns the new active pack.
-  - `preview`: opens a `relay-packs` pane: one card per pack, every role in a row, walking, with the active one marked "Active" (pinned) or "Active · seasonal" (auto). Use pins that pack.
-- **Slash command** `/relay-pack` (no args: list; `<id>`: pin; `auto`: follow the seasons; `preview`: open the gallery). Works without the model.
-- **Skill** `relay-pack` in the `relay-panel` plugin: "switch / list / preview sprite packs". It calls the tool. Model-invocable so "use the dogs" works.
+- **Tool** `mcp__relay-panel__pack` `{ action: 'list' | 'set' | 'shuffle' | 'seasons' | 'preview', id?, ids?, on? }`:
+  - `list`: the settings line first, then ids, names, variant count, `(active)` on the one showing. The line: `everyday: cats · seasons on · showing: cats · next: turkeys Nov 15`; a shuffle reads `everyday: shuffle (cats, dogs) · …`; a skip adds `· christmas skipped until Dec 31`; seasons off reads `· seasons off` with no `next`.
+  - `set` with `id`: a pack id becomes the everyday pack (`ok: everyday pack is Pixel dogs`; in season `ok: Pixel dogs now; Christmas skipped until Dec 31`); `shuffle` shuffles every non-holiday pack; `auto` turns seasons on. An unknown id is refused, naming the valid ones.
+  - `shuffle` with optional `ids`: everyday `shuffle` over those ids, with a fresh pick now and the same in-season skip. Holiday or unknown ids are refused, naming the valid ones.
+  - `seasons` with `on`: holiday packs on or off (`ok: seasons off; showing Pixel crabs`).
+  - `preview`: opens a `relay-packs` pane: one card per pack, every role in a row, walking. Labels: holiday cards "Holiday · Nov 15-30" / "Holiday · December", the everyday pack "Everyday", the one drawn now "Showing" (green). "Use" (on every card but the fixed everyday pack) sets the everyday pack.
+- **Slash command** `/relay-pack` (no args: list; `<id>`; `shuffle [ids…]`; `seasons on|off`; `auto` = seasons on; `preview`). Works without the model.
+- **Skill** `relay-pack` in the `relay-panel` plugin maps plain requests ("use dogs", "shuffle my sprites", "turn off holidays") to the tool. Model-invocable.
 
 ## Verification
 
@@ -126,6 +148,6 @@ Both panels would draw a band and auto-open on plan reports. After installing re
 
 ## Open questions
 
-1. Keep the five tier names (light … fable) as is? Default: yes.
+1. Keep the five tier names (light … expert) as is? Settled: the top tier is `expert`, formerly `fable`; the panel still reads `fable` and `relay-fable` as expert.
 2. Crab variants: one clay colour, or a few tints? Default: one, extra tints only if they look good.
 3. Should `/relay` stay model-invocable (auto) or be manual like `/savvy-flow`? Default: auto, since that's how you use it now.

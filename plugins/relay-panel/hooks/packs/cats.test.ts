@@ -50,7 +50,7 @@ test('cats: every role and coat renders inside the grid', () => {
 
 test('cats: tier does not change the drawing', () => {
   const o = { variant: 'lilac', accent: ACCENT }
-  expect(cats.draw(0, 0, { role: 'developer', tier: 'fable' }, o)).toBe(cats.draw(0, 0, { role: 'developer', tier: 'light' }, o))
+  expect(cats.draw(0, 0, { role: 'developer', tier: 'expert' }, o)).toBe(cats.draw(0, 0, { role: 'developer', tier: 'light' }, o))
 })
 
 test('cats: runs merge into wide rects', () => {

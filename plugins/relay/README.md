@@ -14,13 +14,40 @@ Independent tasks run in parallel waves, at most 10 workers at once (2-5 by defa
 
 Agent types are `relay:relay-light`, `relay:relay-medium` and so on.
 
-| Tier | Agent | Model / effort | Use for |
+| Tier | Agent | Default model / effort | Use for |
 | --- | --- | --- | --- |
-| Fable | `relay-fable` | Fable / high | The hardest problems: very complex logic, bugs that survived a Heavy investigation, design features only when asked. |
-| Heavy | `relay-heavy` | Opus / xhigh | Understand and find: unfamiliar or messy code, unclear root cause, non-obvious architecture. |
-| Careful | `relay-careful` | Opus / high | Do it right: multi-file refactors, fixes that must keep invariants, many edge cases. |
-| Medium | `relay-medium` | Opus / medium | Standard features, fixes with a known cause, a few files. |
-| Light | `relay-light` | Opus / low | Mechanical edits, renames, config, running builds and tests. |
+| Expert (formerly fable) | `relay-expert` | Opus 5.5 / xhigh | The hardest problems: very complex logic, bugs that survived a Heavy investigation, design features only when asked. |
+| Heavy | `relay-heavy` | Opus 5.5 / high | Understand and find: unfamiliar or messy code, unclear root cause, non-obvious architecture. |
+| Careful | `relay-careful` | Sonnet 5.5 / high | Do it right: multi-file refactors, fixes that must keep invariants, many edge cases. |
+| Medium | `relay-medium` | Sonnet 5.5 / medium | Standard features, fixes with a known cause, a few files. |
+| Light | `relay-light` | Sonnet 5.5 / low | Mechanical edits, renames, config, running builds and tests. |
+
+The agent files use the short aliases (`sonnet`, `opus`), which track the newest version.
+
+## Model presets
+
+To override the defaults, add a `## Relay models` block to your CLAUDE.md. The orchestrator then passes that model and effort on every worker call:
+
+```
+## Relay models
+- light: sonnet, low
+- medium: sonnet, medium
+- careful: sonnet, high
+- heavy: opus, high
+- expert: opus, xhigh
+```
+
+Presets, exact models as of October 2026:
+
+| Tier | Default (no block needed) | Baller | Budget |
+| --- | --- | --- | --- |
+| light | Sonnet 5.5, low | Opus 5.5, low | Haiku 5.5, low |
+| medium | Sonnet 5.5, medium | Opus 5.5, medium | Haiku 5.5, medium |
+| careful | Sonnet 5.5, high | Opus 5.5, high | Sonnet 5.5, medium |
+| heavy | Opus 5.5, high | Opus 5.5, xhigh | Sonnet 5.5, high |
+| expert | Opus 5.5, xhigh | Fable 5.1, xhigh (needs Fable access) | Opus 5.5, high |
+
+Custom: any model and effort per tier. In the block, write the aliases: `haiku`, `sonnet`, `opus`, `fable`. Default needs no block; delete the block to go back to it. expert runs on Opus 5.5 unless you choose Baller. If your account cannot use a listed model, that tier falls back to its default and the orchestrator says so once.
 
 ## With relay-panel
 
@@ -32,4 +59,4 @@ relay works on its own. With [relay-panel](../relay-panel) installed, the flow d
 claude plugin install relay@relay
 ```
 
-Add the marketplace first; full steps are in the [repository README](../../README.md).
+Add the marketplace first (`claude plugin marketplace add tommyliang-dev/relay`), then restart Claude Code. Copy-paste setup prompts, including one that picks a model preset for you, are in the [repository README](../../README.md).

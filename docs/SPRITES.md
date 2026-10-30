@@ -32,7 +32,7 @@ Every role-dressed pack keeps the same costume meanings, so the panel reads the 
 | explore | pirate: bandana, eye patch, cutlass |
 | other | plain, collar only |
 
-Crabs dress by tier instead (fable astronaut, heavy detective, careful hard hat, medium chef, light racer). A pack picks one scheme; role is the default.
+Crabs dress by tier instead (expert astronaut, formerly fable; heavy detective, careful hard hat, medium chef, light racer). A pack picks one scheme; role is the default.
 
 A themed pack may reinterpret each costume for its theme. It must keep the role readable at a glance: same kind of hat and same kind of held prop in the same place.
 

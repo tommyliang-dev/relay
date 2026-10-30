@@ -1,7 +1,7 @@
 ---
 name: relay-careful
-description: "Relay careful worker (Opus, high effort). Well-understood but delicate work: multi-file refactors, bug fixes that must preserve invariants, logic with many edge cases, changes where thoroughness matters more than insight. Spawned only by the /relay orchestrator."
-model: opus
+description: "Relay careful worker (Sonnet 5.5, high effort). Well-understood but delicate work: multi-file refactors, bug fixes that must preserve invariants, logic with many edge cases, changes where thoroughness matters more than insight. Spawned only by the /relay orchestrator."
+model: sonnet
 effort: high
 ---
 
