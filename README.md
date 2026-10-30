@@ -11,15 +11,15 @@ relay is forked from `savvy-flow` and `savvy-progress` in [johnnyvizz/claude-kit
 
 ## Install
 
-From the local clone:
+From GitHub (the repo is private, so this needs GitHub access to it):
 
 ```
-claude plugin marketplace add ~/Desktop/coding/relay
+claude plugin marketplace add tommyliang-dev/relay
 claude plugin install relay@relay
 claude plugin install relay-panel@relay
 ```
 
-Once the repo is on GitHub, `claude plugin marketplace add <owner>/<repo>` works too.
+Or from a local clone: `claude plugin marketplace add ~/Desktop/coding/relay`, then the same two installs.
 
 Restart the session afterwards.
 
