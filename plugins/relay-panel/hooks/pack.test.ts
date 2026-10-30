@@ -1,17 +1,28 @@
 import type { On } from 'claude-code'
 import { expect, mock, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
-import { DEFAULT_PACK, packIds, resolvePack } from './packs'
+import { DEFAULT_PACK, packById, packIds, resolvePack } from './packs'
 
 const PLUGIN = 'relay-panel'
 const PROGRESS = 'mcp__relay-panel__progress'
 const band = { hasSurvey: false, isWorking: false, maxRows: 4, bodyColumns: 100, scroll: { offset: 0, bodyRows: 4 }, view: {} }
 const pane = { title: '', isFocused: false, bodyColumns: 60, placement: 'dock', scroll: { offset: 0, bodyRows: 30 }, view: {} } as const
 
+// Local time; the seasons are local. June is off season: auto mode draws the default pack.
+const at = (y: number, m: number, d: number, h = 0, min = 0) => new Date(y, m - 1, d, h, min).getTime()
+const JUNE = at(2026, 6, 1, 12)
+
 // A session with a flow, one running relay worker and one planned task.
 // The plugin's store, kept here so a test can change it between session starts.
-async function session($: Engine, on: On, store: Map<string, unknown> = new Map(), opened: string[] = []) {
-  mock.clock(on)
+// `afters` records every `$.clock.after` wait the plugin asks for (only the season timer uses it).
+async function session($: Engine, on: On, store: Map<string, unknown> = new Map(), opened: string[] = [], now = JUNE, afters: number[] = []) {
+  // Outer to the mock clock, so it sees each wait and passes it on.
+  // (One hook per event name per `on`: the mock owns `clock.after`, so this stands on the namespace.)
+  on('clock.*', async (_$, e, next) => {
+    if (next.event === 'clock.after') afters.push((e as { ms: number }).ms)
+    return next(e as never)
+  })
+  const clock = mock.clock(on, { now })
   on('store.get', (_$, e) => ({ value: store.get((e as { key: string }).key) }) as never)
   on('store.set', (_$, e) => {
     const { key, value } = e as { key: string; value: unknown }
@@ -32,6 +43,7 @@ async function session($: Engine, on: On, store: Map<string, unknown> = new Map(
   await $.session.start({ source: 'startup', cwd: '/repo', surface: 'desktop', isInteractive: true } as never)
   await $.tool.call({ tool: PROGRESS, title: 'Ship it', phase: 'delegate', tasks: [{ title: 'Fix the parser bug', tier: 'medium' }, { title: 'Wire the CLI', tier: 'light' }] } as never)
   await $.agent.spawn({ tool_use_id: 't1', prompt: 'p', description: 'Fix the parser bug', subagentType: 'relay:relay-medium', provider: 'engine', parentModel: 'claude-opus-5-5', background: true, fork: false } as never)
+  return clock
 }
 
 // Every Svg the band and the panel (full and compact) draw, joined.
@@ -97,7 +109,8 @@ const other = (): string | undefined => packIds().find(id => id !== DEFAULT_PACK
 test('pack tool: list names every pack and marks the active one', async ($, on) => {
   await session($, on)
   const r = (await $.tool.call({ tool: PACK, action: 'list' } as never)) as { result: string }
-  const lines = r.result.split('\n')
+  const [mode, ...lines] = r.result.split('\n')
+  expect(mode).toBe(`mode: auto (seasonal), now ${DEFAULT_PACK}; turkeys from Nov 15`)
   expect(lines.length).toBe(packIds().length)
   for (const id of packIds()) {
     const p = resolvePack(id)
@@ -132,7 +145,7 @@ test('pack tool: an unknown id is refused, names the valid ids and stores nothin
   await session($, on, store)
   const r = (await $.tool.call({ tool: PACK, action: 'set', id: 'dragons' } as never)) as { deny: string }
   expect(r.deny).toContain('dragons')
-  for (const id of packIds()) expect(r.deny).toContain(id)
+  for (const id of ['auto', ...packIds()]) expect(r.deny).toContain(id)
   expect(store.has('pack')).toBe(false)
   const { band: b } = await drawn($)
   expect(b).toContain(scope(DEFAULT_PACK))
@@ -178,7 +191,7 @@ test('/relay-pack: a stored pack that is gone is mentioned once', async ($, on) 
   expect(second.text).not.toContain('is gone')
 })
 
-test('gallery: one card per pack, Active on the active one, Use swaps', async ($, on) => {
+test('gallery: one card per pack, Active on the active one, Use pins', async ($, on) => {
   const store = new Map<string, unknown>()
   await session($, on, store)
   const ui = await $.ui.mount({ plugin: PLUGIN, surface: 'desktop', component: 'Pane', requestId: 'relay-packs', props: pane })
@@ -190,7 +203,8 @@ test('gallery: one card per pack, Active on the active one, Use swaps', async ($
     expect(card).toBeDefined()
     // Seven sprites, one per costume.
     expect(card?.source.split(scope(id)).length).toBe(8)
-    expect(card?.alt.endsWith(', Active')).toBe(id === DEFAULT_PACK)
+    // Auto mode: the active card says it follows the seasons.
+    expect(card?.alt.endsWith(', Active · seasonal')).toBe(id === DEFAULT_PACK)
   }
   const id = other()
   if (!id) return
@@ -201,5 +215,108 @@ test('gallery: one card per pack, Active on the active one, Use swaps', async ($
   expect(c.find(x => x.source.includes(scope(id)))?.alt.endsWith(', Active')).toBe(true)
   expect(c.find(x => x.source.includes(scope(DEFAULT_PACK)))?.alt.endsWith(', Active')).toBe(false)
   expect(await ui.find({ key: `use-${DEFAULT_PACK}` })).toBeDefined()
+  await ui.unmount()
+})
+
+// --- auto mode: the pack follows the seasons (packs/seasons.ts), one timer at a time.
+
+test('auto: the faked clock picks the season, and one timer is armed', async ($, on) => {
+  const afters: number[] = []
+  await session($, on, new Map(), [], at(2026, 11, 20, 12), afters)
+  const { band: b, pane: p } = await drawn($)
+  expect(b).toContain(scope('turkeys'))
+  expect(p).toContain(scope('turkeys'))
+  expect(afters.length).toBe(1)
+  // Capped at a day: Dec 1 is more than a day away.
+  expect(afters[0]).toBe(24 * 60 * 60 * 1000)
+  const r = (await $.tool.call({ tool: PACK, action: 'list' } as never)) as { result: string }
+  const next = packById('christmas') ? '; christmas from Dec 1' : ''
+  expect(r.result.split('\n')[0]).toBe(`mode: auto (seasonal), now turkeys until Nov 30${next}`)
+})
+
+test('auto: the timer firing at the season start swaps the band and the panel, and re-arms', async ($, on) => {
+  const afters: number[] = []
+  const clock = await session($, on, new Map(), [], at(2026, 11, 14, 23, 59), afters)
+  const bar = await $.ui.mount({ plugin: PLUGIN, surface: 'desktop', component: 'AbovePrompt', props: band })
+  const ui = await $.ui.mount({ plugin: PLUGIN, surface: 'desktop', component: 'Pane', requestId: 'relay-agents', props: pane })
+  const svgOf = async (m: typeof ui | typeof bar) => (await m.findAll({ type: 'Svg' })).map(el => String(el.props.source)).join('')
+  expect(await svgOf(bar)).toContain(scope('crabs'))
+  expect(afters).toEqual([60 * 1000])
+
+  await clock.set(at(2026, 11, 15))
+  await clock.settle()
+  expect(await svgOf(bar)).toContain(scope('turkeys'))
+  expect(await svgOf(bar)).not.toContain(scope('crabs'))
+  expect(await svgOf(ui)).toContain(scope('turkeys'))
+  // Re-armed once, for the next boundary (capped at a day).
+  expect(afters.length).toBe(2)
+  expect(afters[1]).toBe(24 * 60 * 60 * 1000)
+  await bar.unmount()
+  await ui.unmount()
+})
+
+test('auto: December draws christmas once it is registered, else the off-season pack', async ($, on) => {
+  await session($, on, new Map(), [], at(2026, 12, 10, 12))
+  const { band: b } = await drawn($)
+  expect(b).toContain(scope(packById('christmas') ? 'christmas' : 'crabs'))
+})
+
+test('pinned: a stored pack id pins it, in season too, with no timer armed', async ($, on) => {
+  const afters: number[] = []
+  await session($, on, new Map([['pack', 'cats']]), [], at(2026, 11, 20, 12), afters)
+  const { band: b } = await drawn($)
+  expect(b).toContain(scope('cats'))
+  expect(afters.length).toBe(0)
+  const r = (await $.tool.call({ tool: PACK, action: 'list' } as never)) as { result: string }
+  expect(r.result.split('\n')[0]).toBe('mode: pinned to cats (/relay-pack auto to follow the seasons)')
+})
+
+test('pin and auto round trip: the timer goes with auto, the store keeps the mode', async ($, on) => {
+  const store = new Map<string, unknown>()
+  const afters: number[] = []
+  const clock = await session($, on, store, [], at(2026, 11, 14, 23, 59), afters)
+  expect(afters.length).toBe(1)
+
+  const pin = await $.command.run({ command: 'relay-pack', args: 'cats' } as never)
+  expect(pin.text).toBe(`ok: active pack is ${resolvePack('cats').name}`)
+  expect(store.get('pack')).toBe('cats')
+  expect(afters.length).toBe(1)
+  // The cancelled timer's time passes: the pin holds.
+  await clock.set(at(2026, 11, 15, 0, 1))
+  await clock.settle()
+  expect((await drawn($)).band).toContain(scope('cats'))
+  expect(afters.length).toBe(1)
+
+  const auto = await $.tool.call({ tool: PACK, action: 'set', id: 'auto' } as never)
+  expect(auto).toMatchObject({ result: `ok: following the seasons; active pack is ${resolvePack('turkeys').name}` })
+  expect(store.get('pack')).toBe('auto')
+  expect(afters.length).toBe(2)
+  const { band: b, pane: p } = await drawn($)
+  expect(b).toContain(scope('turkeys'))
+  expect(p).toContain(scope('turkeys'))
+
+  // Stored `auto` is auto in the next session too.
+  await $.session.start({ source: 'resume', cwd: '/repo', surface: 'desktop', isInteractive: true } as never)
+  const r = (await $.command.run({ command: 'relay-pack' } as never)) as { text: string }
+  expect(r.text.split('\n')[0]).toContain('mode: auto (seasonal), now turkeys')
+})
+
+test('an unknown stored value falls back to the option (auto by default)', async ($, on) => {
+  const afters: number[] = []
+  await session($, on, new Map([['pack', 'dodos']]), [], at(2026, 11, 20, 12), afters)
+  const { band: b } = await drawn($)
+  expect(b).toContain(scope('turkeys'))
+  expect(afters.length).toBe(1)
+})
+
+test('gallery: the active card reads Active when pinned, Active · seasonal in auto', async ($, on) => {
+  await session($, on, new Map([['pack', 'cats']]))
+  const ui = await $.ui.mount({ plugin: PLUGIN, surface: 'desktop', component: 'Pane', requestId: 'relay-packs', props: pane })
+  const alts = async () => (await ui.findAll({ type: 'Svg' })).map(el => String(el.props.alt))
+  expect((await alts()).filter(a => a.endsWith(', Active'))).toEqual([expect.stringContaining(resolvePack('cats').name)])
+  await $.command.run({ command: 'relay-pack', args: 'auto' } as never)
+  const now = await alts()
+  expect(now.filter(a => a.endsWith(', Active')).length).toBe(0)
+  expect(now.filter(a => a.endsWith(', Active · seasonal'))).toEqual([expect.stringContaining(resolvePack(DEFAULT_PACK).name)])
   await ui.unmount()
 })

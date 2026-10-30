@@ -2,6 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import { DEFAULT_PACK, PACKS, packById, packIds, resolvePack } from './packs'
+import { nextChangeAt, nextSeasonAt, seasonAt, seasonalPackAt } from './packs/seasons'
 import type { Pack, Role, Tier } from './packs/types'
 import type { AgentRun, Flow, Panel, Phase, PlannedTask } from '../types'
 
@@ -83,6 +84,7 @@ const STRINGS = {
     ctx: 'ctx',
     packs: 'Sprite packs',
     active: 'Active',
+    activeSeasonal: 'Active · seasonal',
     use: 'Use',
     variants: (n: number) => `${n} ${n === 1 ? 'variant' : 'variants'}`,
     tier: { light: 'light', medium: 'medium', careful: 'careful', heavy: 'heavy', fable: 'fable', other: 'other' },
@@ -118,6 +120,7 @@ const STRINGS = {
     ctx: 'ctx',
     packs: 'Наборы спрайтов',
     active: 'Активен',
+    activeSeasonal: 'Активен · по сезону',
     use: 'Выбрать',
     variants: (n: number) => `вариантов: ${n}`,
     tier: { light: 'light', medium: 'medium', careful: 'careful', heavy: 'heavy', fable: 'fable', other: 'other' },
@@ -153,6 +156,7 @@ const STRINGS = {
     ctx: 'הקשר',
     packs: 'ערכות דמויות',
     active: 'פעילה',
+    activeSeasonal: 'פעילה · עונתית',
     use: 'בחירה',
     variants: (n: number) => `גרסאות: ${n}`,
     tier: { light: 'קל', medium: 'בינוני', careful: 'זהיר', heavy: 'כבד', fable: 'פייבל', other: 'אחר' },
@@ -751,13 +755,13 @@ const GALLERY: readonly { role: Role; tier: Tier }[] = [
 const CARD_H = 84
 const CARD_PAD = 12
 
-const packCardSvg = (p: Pack, W: number, isActive: boolean): string => {
+const packCardSvg = (p: Pack, W: number, isActive: boolean, activeLabel: string = tr().active): string => {
   const s = tr()
   const fit = panelFit(p)
   const inner = W - CARD_PAD * 2
   // The row fits the card: past its width the sprites step closer, never smaller.
   const pitch = Math.min(fit.pitch, (inner - fit.w) / (GALLERY.length - 1))
-  const activeW = isActive ? textWidth(s.active, 11) + 12 : 0
+  const activeW = isActive ? textWidth(activeLabel, 11) + 12 : 0
   const nameW = inner - activeW
   const count = s.variants(p.variants.length)
   const sprites = GALLERY.map((who, i) =>
@@ -775,7 +779,7 @@ const packCardSvg = (p: Pack, W: number, isActive: boolean): string => {
     CARD_H,
     `<rect class="tile" x="0" y="0" width="${W}" height="${CARD_H}" rx="8"/>
 <text ${startText(W, CARD_PAD, 22)} font-family="${FONT}" font-size="13"><tspan class="t" font-weight="600">${xml(fitText(p.name, 13, Math.max(40, nameW - textWidth(count, 11) - 12)))}</tspan><tspan class="s" font-size="11">  ·  ${xml(count)}</tspan></text>
-${isActive ? `<text ${endText(W, W - CARD_PAD, 22, true)} font-family="${FONT}" font-size="11" font-weight="600" fill="#3B9C5F">${xml(s.active)}</text>` : ''}
+${isActive ? `<text ${endText(W, W - CARD_PAD, 22, true)} font-family="${FONT}" font-size="11" font-weight="600" fill="#3B9C5F">${xml(activeLabel)}</text>` : ''}
 ${sprites}`,
   )
 }
@@ -809,8 +813,55 @@ async function autoOpen($: EngineInterface, key: string): Promise<void> {
   void $.ui.open({ id: PANE, title: tr().pane })
 }
 
-// The active pack's id: the stored override when it names a registered pack, else the
-// `pack` option when it does, else the default. Written to the atom, which every drawing reads.
+// Pack mode: 'auto' follows the seasons (packs/seasons.ts), any other value pins that pack.
+// Read from the store key `pack`, then the `pack` option; anything unknown means auto.
+const AUTO = 'auto'
+const DAY = 24 * 60 * 60 * 1000
+const isRegistered = (id: string) => packById(id) !== undefined
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const monthDay = (d: Date) => `${MONTHS[d.getMonth()]} ${d.getDate()}`
+
+// Module scope is fine: session.start sets both again on every (re)load.
+let mode: string = AUTO
+// The one pending season timer, armed only in auto mode. `seasonGen` lets a timer that
+// fires after a cancel (or a re-arm) see it is stale and do nothing.
+let seasonTimer: { cancel: () => void } | undefined
+let seasonGen = 0
+
+const modeOf = (v: unknown): string | undefined => (v === AUTO || (typeof v === 'string' && isRegistered(v)) ? v : undefined)
+
+// The pack the current mode draws now; writes the atom only when the id changes.
+async function applyMode($: EngineInterface): Promise<string> {
+  const id = mode === AUTO ? seasonalPackAt(new Date(await $.clock.now()), isRegistered) : mode
+  if ((await read($, pack)) !== id) await update($, pack, () => id)
+  return id
+}
+
+function cancelSeasonTimer(): void {
+  seasonGen++
+  seasonTimer?.cancel()
+  seasonTimer = undefined
+}
+
+// One timer for the next day the seasonal answer could change, capped at a day in case a
+// long wait is clamped; on firing it re-resolves and re-arms. Nothing runs per render or tick.
+async function armSeasonTimer($: EngineInterface): Promise<void> {
+  cancelSeasonTimer()
+  if (mode !== AUTO) return
+  const gen = seasonGen
+  const at = await $.clock.now()
+  const ms = Math.max(1000, Math.min(DAY, nextChangeAt(new Date(at)).getTime() - at))
+  seasonTimer = $.clock.after(ms, () => {
+    if (gen !== seasonGen) return
+    seasonTimer = undefined
+    void (async () => {
+      await applyMode($)
+      if (gen === seasonGen) await armSeasonTimer($)
+    })()
+  })
+}
+
+// Resolves the mode and the active pack at session.start. Returns the active pack's id.
 export async function loadActivePack($: EngineInterface, option: unknown): Promise<string> {
   let stored: unknown
   try {
@@ -818,10 +869,11 @@ export async function loadActivePack($: EngineInterface, option: unknown): Promi
   } catch {
     // No store: fall through to the option.
   }
-  const id = [stored, option].find((v): v is string => typeof v === 'string' && packById(v) !== undefined) ?? DEFAULT_PACK
+  mode = modeOf(stored) ?? modeOf(option) ?? AUTO
+  const id = await applyMode($)
   // A stored id whose pack is no longer registered: said once, in the next list reply.
-  goneNote = typeof stored === 'string' && stored && !packById(stored) ? `stored pack "${stored}" is gone; using ${id}` : ''
-  await update($, pack, () => id)
+  goneNote = typeof stored === 'string' && stored && !modeOf(stored) ? `stored pack "${stored}" is gone; using ${id}` : ''
+  await armSeasonTimer($)
   return id
 }
 
@@ -830,10 +882,24 @@ let goneNote = ''
 
 const PACKS_PANE = 'relay-packs'
 
-// Every registered pack, one line each, the active one marked.
+// The mode line that heads every list reply.
+async function modeLine($: EngineInterface): Promise<string> {
+  const active = await read($, pack)
+  if (mode !== AUTO) return `mode: pinned to ${active} (/relay-pack auto to follow the seasons)`
+  const now = new Date(await $.clock.now())
+  const season = seasonAt(now)
+  let line = `mode: auto (seasonal), now ${active}`
+  if (season && season.id === active) line += ` until ${monthDay(new Date(now.getFullYear(), season.to[0] - 1, season.to[1]))}`
+  const next = nextSeasonAt(now, isRegistered)
+  if (next && next.id !== active) line += `; ${next.id} from ${monthDay(next.from)}`
+  return line
+}
+
+// The mode, then every registered pack, one line each, the active one marked.
 async function packList($: EngineInterface): Promise<string> {
   const active = await read($, pack)
   const lines = PACKS.map(p => `${p.id}: ${p.name} (${p.variants.length} variants)${p.id === active ? ' (active)' : ''}`)
+  lines.unshift(await modeLine($))
   if (goneNote) {
     lines.unshift(goneNote)
     goneNote = ''
@@ -841,18 +907,25 @@ async function packList($: EngineInterface): Promise<string> {
   return lines.join('\n')
 }
 
-// The one way the pack changes: stored for later sessions, and the atom the band, the
-// panel and the gallery read, so they redraw at once. An unknown id writes nothing.
+// The one way the mode changes: `auto` or a pack id to pin. Stored for later sessions,
+// and the atom the band, the panel and the gallery read, so they redraw at once.
+// An unknown id writes nothing.
 async function setActivePack($: EngineInterface, id: string): Promise<{ ok: boolean; text: string }> {
-  const p = packById(id)
-  if (!p) return { ok: false, text: `unknown pack "${id}"; valid ids: ${packIds().join(', ')}` }
+  const next = modeOf(id)
+  if (!next) return { ok: false, text: `unknown pack "${id}"; valid ids: ${[AUTO, ...packIds()].join(', ')}` }
   try {
-    await $.store.set('pack', p.id)
+    await $.store.set('pack', next)
   } catch {
     // No store: the swap still holds for this session.
   }
-  await update($, pack, () => p.id)
-  return { ok: true, text: `ok: active pack is ${p.name}` }
+  const changed = next !== mode
+  mode = next
+  const active = await applyMode($)
+  await armSeasonTimer($)
+  // The gallery's "seasonal" label follows the mode even when the pack stays the same.
+  if (changed) $.ui.invalidate('ui.render')
+  const name = resolvePack(active).name
+  return { ok: true, text: next === AUTO ? `ok: following the seasons; active pack is ${name}` : `ok: active pack is ${name}` }
 }
 
 async function openGallery($: EngineInterface): Promise<string> {
@@ -923,20 +996,21 @@ export const register: Register = (on, options) => {
       name: 'pack',
       description:
         'List, preview or switch the sprite pack drawn in the relay agents panel and the progress bar. ' +
-        '`list`: the registered packs, the active one marked. `set` with `id`: make that pack active (the band and panel redraw at once). ' +
+        '`list`: the mode (auto follows the seasons, or pinned) and the registered packs, the active one marked. ' +
+        '`set` with `id`: pin that pack (the band and panel redraw at once); `id: "auto"` follows the seasons again. ' +
         '`preview`: open a gallery pane showing every pack.',
       inputSchema: {
         type: 'object',
         properties: {
           action: { type: 'string', enum: ['list', 'set', 'preview'] },
-          id: { type: 'string', description: 'The pack id for `set`, as `list` prints it.' },
+          id: { type: 'string', description: 'For `set`: a pack id as `list` prints it, or `auto` to follow the seasons.' },
         },
         required: ['action'],
       },
     })
     await $.command.register({
       name: 'relay-pack',
-      description: 'List the sprite packs, switch with /relay-pack <id>, or open the gallery with /relay-pack preview',
+      description: 'List the sprite packs, pin one with /relay-pack <id>, follow the seasons with /relay-pack auto, or open the gallery with /relay-pack preview',
     })
 
     // Ticks the running agents' clocks; quiet when nothing runs.
@@ -987,6 +1061,7 @@ export const register: Register = (on, options) => {
     const ui = $.ui.resolve(e)
     const { Box, Text, Button } = ui
     const active = resolvePack(await read($, pack)).id
+    const activeLabel = mode === AUTO ? s.activeSeasonal : s.active
     const use = (p: Pack) => <Button key={`use-${p.id}`} label={s.use} onPress={() => void setActivePack($, p.id)} />
     const align = isRtl() ? 'flex-end' : undefined
 
@@ -999,8 +1074,8 @@ export const register: Register = (on, options) => {
             <Box key={p.id} flexDirection="column" gap={1} alignItems={align}>
               <Svg
                 key={`card-${p.id}`}
-                source={packCardSvg(p, W, p.id === active)}
-                alt={`${p.name}: ${s.variants(p.variants.length)}${p.id === active ? `, ${s.active}` : ''}`}
+                source={packCardSvg(p, W, p.id === active, activeLabel)}
+                alt={`${p.name}: ${s.variants(p.variants.length)}${p.id === active ? `, ${activeLabel}` : ''}`}
                 width={W}
                 height={CARD_H}
               />
@@ -1017,7 +1092,7 @@ export const register: Register = (on, options) => {
           <Box key={p.id} flexDirection="row" gap={1}>
             <Text bold>{p.name}</Text>
             <Text dimColor>{s.variants(p.variants.length)}</Text>
-            {p.id === active ? <Text color={DONE}>{s.active}</Text> : use(p)}
+            {p.id === active ? <Text color={DONE}>{activeLabel}</Text> : use(p)}
           </Box>
         ))}
       </Box>

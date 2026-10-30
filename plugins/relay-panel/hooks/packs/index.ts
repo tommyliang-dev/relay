@@ -2,11 +2,15 @@
 
 import { cats } from './cats'
 import { crabs } from './crabs'
+import { dogs } from './dogs'
+import { turkeys } from './turkeys'
+import { christmas } from './christmas'
 import type { Pack } from './types'
 
-export const PACKS: readonly Pack[] = [cats, crabs]
+export const PACKS: readonly Pack[] = [cats, crabs, dogs, turkeys, christmas]
 
-export const DEFAULT_PACK = 'cats'
+// The off-season pack (packs/seasons.ts OFF_SEASON) and the fallback for any unknown id.
+export const DEFAULT_PACK = 'crabs'
 
 export const packIds = (): string[] => PACKS.map(p => p.id)
 

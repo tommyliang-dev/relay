@@ -6,7 +6,9 @@ An orchestration skill for Claude Code. The session model plans, owns design and
 
 `/relay <task>` runs the flow. The skill is also model-invocable: ask for non-trivial work and it triggers on its own. Plugin skills are namespaced, so the full name is `/relay:relay`.
 
-The flow: understand and plan, design (kept by the orchestrator), delegate by tier, review each result, then close.
+The flow: understand and plan, design (kept by the orchestrator), delegate by tier, spot-check each result, run one final gate, then close.
+
+Independent tasks run in parallel waves, at most 10 workers at once (2-5 by default). Each brief lists the files the worker owns and must not touch, so parallel workers never edit the same file. Workers run no state-changing git; the orchestrator does git only when you ask. Tiers start at the lowest one that plausibly works.
 
 ## Workers
 

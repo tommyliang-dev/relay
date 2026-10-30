@@ -15,13 +15,18 @@ plugins/
     hooks/register.tsx                 band, panel, tools (progress, step, pack), commands
     hooks/packs/types.ts               Pack, Role, Tier, DrawOptions
     hooks/packs/index.ts               registry: list, get, default
+    hooks/packs/seasons.ts             season table: which pack auto mode draws, next change
     hooks/packs/cats.ts                British Shorthair cats
     hooks/packs/crabs.ts               pixel crabs (stock costumes)
+    hooks/packs/dogs.ts                pixel dogs (6 breeds, costumes by role)
+    hooks/packs/turkeys.ts             Thanksgiving turkeys (6 heritage breeds, costumes by role)
+    hooks/packs/christmas.ts           Christmas cast: Santa, Mrs Claus, elves, sled, reindeer
     hooks/packs/contract.test.ts       Pack contract, looped over every registered pack
     hooks/*.test.ts(x), packs/*.test.ts
     skills/relay-pack/SKILL.md         list / preview / swap packs
     types/index.d.ts                   panel state types
 docs/SPEC.md                           approved design
+docs/SPRITES.md                        what we learned about building packs (start here for a new one)
 docs/PLAN.md                           build plan
 docs/preview/                          rendered pack galleries (visual check)
 README.md                              install steps

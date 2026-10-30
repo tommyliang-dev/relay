@@ -47,32 +47,44 @@ claude plugin disable savvy-flow@claude-kit
 
 ## Sprite packs
 
-The panel draws its workers with a sprite pack.
+The panel draws its workers with a sprite pack. By default it follows the seasons (local time):
 
-- **cats** (default): British Shorthairs in 8 coats, dressed by role.
-- **crabs**: the stock crabs, dressed by tier.
+| Dates | Pack |
+|---|---|
+| Nov 15-30 | turkeys |
+| Dec 1-31 | Christmas |
+| the rest of the year | crabs |
+
+The switch happens on its own at midnight; one timer waits for the next change, nothing polls. A seasonal pack that is not installed falls back to crabs.
+
+- **cats**: British Shorthairs in 8 coats, dressed by role.
+- **crabs** (off season): the stock crabs, dressed by tier.
+- **dogs**: corgi, husky, samoyed, bichon frise, maltese and shiba, dressed by role.
+- **turkeys** (Nov 15-30): six heritage breeds with fanned tails, dressed by role.
+- **christmas** (December): a cast by role: Santa conducts, Mrs Claus plans, elves build, design and code, the flying sled explores, and reindeer (Rudolph included) are everyone else.
 
 Switch packs:
 
-- `/relay-pack` lists the packs.
-- `/relay-pack crabs` switches to crabs.
+- `/relay-pack` shows the mode and lists the packs.
+- `/relay-pack cats` pins cats, all year.
+- `/relay-pack auto` follows the seasons again.
 - `/relay-pack preview` opens a gallery of every pack.
-- Or just ask: "switch to crabs". The `relay-pack` skill handles it.
+- Or just ask: "switch to cats". The `relay-pack` skill handles it.
 
-The default comes from the `pack` option, set in `/config` or in `~/.claude/settings.json`:
+The starting mode comes from the `pack` option (`auto`, or a pack id to pin), set in `/config` or in `~/.claude/settings.json`:
 
 ```json
-{ "pluginConfigs": { "relay-panel": { "options": { "pack": "crabs" } } } }
+{ "pluginConfigs": { "relay-panel": { "options": { "pack": "cats" } } } }
 ```
 
-A choice made with `/relay-pack` overrides the default and persists across sessions.
+A choice made with `/relay-pack` overrides the option and persists across sessions.
 
 ### Adding a pack
 
 1. Add one file in `plugins/relay-panel/hooks/packs/` that exports a `Pack` (see `types.ts`).
 2. Add one line to `hooks/packs/index.ts`.
 
-`contract.test.ts` runs the shared tests on every registered pack. Dogs and spiders are planned.
+`contract.test.ts` runs the shared tests on every registered pack. Spiders may follow.
 
 ## Development
 

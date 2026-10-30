@@ -82,20 +82,29 @@ Adding a pack = one file + one line in the registry + its tests. No panel change
 
 ## Active pack: storage and redraw
 
-- **Default**: plugin option `pack` in `userConfig` (`cats` default; choices are the shipped pack ids). Set in `/config` or `pluginConfigs.relay-panel.options.pack`.
-- **Override**: `$.store` key `pack` (persists across sessions, per plugin). Written by the `pack` tool or `/relay-pack`.
-- **Live**: session atom `{ plugin: 'relay-panel', key: 'pack' }`, loaded at `session.start` from store → option → `cats`. The band and panel read it while drawing, so a write redraws both at once; no restart.
-- Unknown id (pack removed): fall back to `cats` and say so once.
+- **Mode**: `auto` (follow the seasons) or a pinned pack id. Read at `session.start` from the `$.store` key `pack` (persists across sessions, per plugin; written by the `pack` tool or `/relay-pack`), then the plugin option `pack` in `userConfig` (`auto` default, then the shipped pack ids; `/config` or `pluginConfigs.relay-panel.options.pack`). A missing or unknown value falls through; nothing valid means `auto`.
+- **Seasons** (`hooks/packs/seasons.ts`, local time, inclusive):
+
+  | Dates | Pack |
+  |---|---|
+  | Nov 15-30 | `turkeys` |
+  | Dec 1-31 | `christmas` |
+  | otherwise | `crabs` (`OFF_SEASON`, also `DEFAULT_PACK`) |
+
+  A season whose pack is not registered draws `crabs`.
+- **Live**: session atom `{ plugin: 'relay-panel', key: 'pack' }` holds the active pack id, written only when it changes. The band and panel read it while drawing, so a write redraws both at once; no restart.
+- **Cost**: the pack is resolved once at `session.start`. In auto mode one `$.clock.after` timer waits for `nextChangeAt(now)` (local midnight of the next season start or the day after a season end), capped at 24 h; on firing it re-resolves, writes the atom if changed, and re-arms. Pinning cancels the timer; `auto` re-arms it. Nothing checks per render or per tick.
+- Unknown stored id (pack removed): fall back to the option and say so once.
 
 Why not a settings key: writing `settings.json` from a mod is heavier, and the option already covers "set it in config".
 
 ## Swapping packs
 
 - **Tool** `mcp__relay-panel__pack` `{ action: 'list' | 'set' | 'preview', id? }`:
-  - `list`: ids, names, variant count, which is active.
-  - `set`: validates, writes store + atom, returns the new active pack.
-  - `preview`: opens a `relay-packs` pane: one card per pack, every role in a row, walking, with the active one marked.
-- **Slash command** `/relay-pack` (no args: list; `<id>`: set; `preview`: open the gallery). Works without the model.
+  - `list`: the mode first (`mode: auto (seasonal), now crabs; turkeys from Nov 15` or `mode: pinned to cats (/relay-pack auto to follow the seasons)`), then ids, names, variant count, which is active.
+  - `set`: validates; a pack id pins it, `auto` follows the seasons. Writes store + atom, returns the new active pack.
+  - `preview`: opens a `relay-packs` pane: one card per pack, every role in a row, walking, with the active one marked "Active" (pinned) or "Active · seasonal" (auto). Use pins that pack.
+- **Slash command** `/relay-pack` (no args: list; `<id>`: pin; `auto`: follow the seasons; `preview`: open the gallery). Works without the model.
 - **Skill** `relay-pack` in the `relay-panel` plugin: "switch / list / preview sprite packs". It calls the tool. Model-invocable so "use the dogs" works.
 
 ## Verification

@@ -1,6 +1,6 @@
 {
   "name": "relay-panel",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Progress bar above the prompt for /relay, plus an agents panel (/relay-agents) with swappable sprite packs: running, finished and planned subagents with model, task progress, context, cost and time. Forked from savvy-progress in johnnyvizz/claude-kit.",
   "author": { "name": "Tommy Liang" },
   "types": "./types/index.d.ts",
@@ -22,9 +22,9 @@
     "pack": {
       "type": "string",
       "title": "Sprite pack",
-      "description": "Default sprite pack for the panel; /relay-pack overrides it",
-      "default": "cats",
-      "options": ["cats", "crabs"]
+      "description": "auto follows the seasons (crabs; turkeys Nov 15-30; Christmas in December); a pack id pins that pack. /relay-pack overrides it",
+      "default": "auto",
+      "options": ["auto", "cats", "crabs", "dogs", "turkeys", "christmas"]
     }
   },
   "license": "MIT"

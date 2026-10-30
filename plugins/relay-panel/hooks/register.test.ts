@@ -74,15 +74,22 @@ for (const surface of ['terminal', 'desktop'] as const) {
   })
 }
 
-// Every panel row draws a British Shorthair; no crab survives in the drawing.
+// With the cats pinned, every panel row draws a British Shorthair; no crab survives in the drawing.
 test('desktop: a running relay worker draws as a cat in its costume', async ($, on) => {
   mock.clock(on)
+  mock.store(on, { pack: 'cats' })
+  mock.env(on, { LANG: 'en_US.UTF-8' })
+  on('settings.read', async () => ({ value: {} }) as never)
+  on('session.start', async () => ({ cwd: '/repo' }) as never)
+  on('tool.register', (_$, e) => ({ value: { tool: String((e as { name?: string }).name) } }) as never)
+  on('command.register', (_$, e) => ({ value: { command: String((e as { name?: string }).name) } }) as never)
   on('ui.open', () => ({ value: { isPlaced: true } }))
   on('agent.spawn', () => ({ model: 'claude-opus-5-5', agentId: 'a1' }))
   on('turn.complete', () => ({ text: '' }) as never)
   on('turn.step', async function* () {
     return { turnId: 'turn', index: 0, answer: '', toolUses: [], stopReason: 'end_turn', usage: null } as never
   })
+  await $.session.start({ source: 'startup', cwd: '/repo', surface: 'desktop', isInteractive: true } as never)
   await $.agent.spawn({ tool_use_id: 't1', prompt: 'p', description: 'Fix the parser bug', subagentType: 'relay:relay-medium', provider: 'engine', parentModel: 'claude-opus-5-5', background: true, fork: false } as never)
 
   const ui = await $.ui.mount({ plugin: PLUGIN, surface: 'desktop', component: 'Pane', requestId: 'relay-agents', props: pane })
