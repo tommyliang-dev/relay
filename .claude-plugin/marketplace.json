@@ -4,6 +4,6 @@
   "metadata": { "description": "relay: orchestrated delivery skill plus a live agents panel with sprite packs. Forked from johnnyvizz/claude-kit." },
   "plugins": [
     { "name": "relay", "source": "./plugins/relay", "description": "Skill: plan, delegate to tiered relay workers, review.", "version": "0.3.0", "category": "skill" },
-    { "name": "relay-panel", "source": "./plugins/relay-panel", "description": "Mod: progress bar above the prompt and a live agents panel with swappable sprite packs.", "version": "0.3.0", "category": "mod" }
+    { "name": "relay-panel", "source": "./plugins/relay-panel", "description": "Mod: progress bar above the prompt and a live agents panel with swappable sprite packs.", "version": "0.3.1", "category": "mod" }
   ]
 }

@@ -1001,7 +1001,7 @@ async function settingsLine($: EngineInterface): Promise<string> {
 // The settings, then every registered pack, one line each, the one showing marked.
 async function packList($: EngineInterface): Promise<string> {
   const active = await read($, pack)
-  const lines = PACKS.map(p => `${p.id}: ${p.name} (${p.variants.length} variants)${p.id === active ? ' (active)' : ''}`)
+  const lines = PACKS.map(p => `${p.id}: ${p.name} (${p.variants.length} ${p.variants.length === 1 ? 'variant' : 'variants'})${p.id === active ? ' (active)' : ''}`)
   lines.unshift(await settingsLine($))
   if (goneNote) {
     lines.unshift(goneNote)

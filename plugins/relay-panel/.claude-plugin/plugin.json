@@ -1,6 +1,6 @@
 {
   "name": "relay-panel",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Progress bar above the prompt for /relay, plus an agents panel (/relay-agents) with swappable sprite packs: running, finished and planned subagents with model, task progress, context, cost and time. Forked from savvy-progress in johnnyvizz/claude-kit.",
   "author": { "name": "Tommy Liang" },
   "types": "./types/index.d.ts",

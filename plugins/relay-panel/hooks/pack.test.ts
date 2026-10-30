@@ -129,8 +129,10 @@ test('pack tool: list heads with the settings line, then every pack, the one sho
   for (const id of packIds()) {
     const p = resolvePack(id)
     const line = lines.find(l => l.startsWith(`${id}: `))
-    expect(line).toBe(`${id}: ${p.name} (${p.variants.length} variants)${id === DEFAULT_PACK ? ' (active)' : ''}`)
+    expect(line).toBe(`${id}: ${p.name} (${p.variants.length} ${p.variants.length === 1 ? 'variant' : 'variants'})${id === DEFAULT_PACK ? ' (active)' : ''}`)
   }
+  // A one-variant pack reads in the singular.
+  expect(lines.find(l => l.startsWith('crabs: '))).toContain('(1 variant)')
 })
 
 test('pack tool: set stores the everyday pack and redraws the band and the panel', async ($, on) => {
@@ -154,7 +156,7 @@ test('pack tool: set stores the everyday pack and redraws the band and the panel
   expect(await svgOf(ui)).not.toContain(scope(DEFAULT_PACK))
   const lines = await listOf($)
   expect(lines[0]).toBe(`everyday: ${id} · seasons on · showing: ${id} · next: turkeys Nov 15`)
-  expect(lines).toContain(`${id}: ${nameOf(id)} (${resolvePack(id).variants.length} variants) (active)`)
+  expect(lines).toContain(`${id}: ${nameOf(id)} (${resolvePack(id).variants.length} ${resolvePack(id).variants.length === 1 ? 'variant' : 'variants'}) (active)`)
   await bar.unmount()
   await ui.unmount()
 })
