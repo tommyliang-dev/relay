@@ -1,6 +1,6 @@
 # relay: spec
 
-Status: approved 2026-10-30 with the default answers to the open questions.
+Describes relay 0.4.0.
 
 ## Goal
 
@@ -15,7 +15,7 @@ The repo is a marketplace named `relay` with two plugins.
 | Plugin | What it is | Source it copies |
 |---|---|---|
 | `relay` | Orchestrator skill + five tiered worker agents | `claude-kit/savvy-flow` 1.2.0, plus the auto-invoking wording of `~/.claude/skills/savvy-flow-auto` |
-| `relay-panel` | Progress bar above the prompt + agents panel + sprite packs | The dev-mods fork of `savvy-progress` 1.2.1 (cats), with the stock crab code restored as a pack |
+| `relay-panel` | Progress bar above the prompt + agents panel + sprite packs | The dev-mods fork of `savvy-progress` 1.2.1 (cats), with the stock crab restored as the `clawd` pack |
 
 ### Names (all distinct from the stock plugins)
 
@@ -29,9 +29,11 @@ The repo is a marketplace named `relay` with two plugins.
 | Pane id / state plugin key | `savvy-agents` / `savvy-progress` | `relay-agents` / `relay-panel` |
 | Settings key | `pluginConfigs.savvy-progress` | `pluginConfigs.relay-panel` |
 
-The panel recognises **only** `relay-*` workers as tiered (so it does not fight the stock panel over `savvy-*` runs). Every other subagent still shows as `other`, as today.
+The panel recognises **only** `relay-*` workers as tiered (so it does not fight the stock panel over `savvy-*` runs). Every other subagent shows as `other`.
 
 Behaviour otherwise matches the fork: languages (en, ru, he with RTL), `autoOpen`, cost table, step reporting, the brief line appended to workers, sentence case.
+
+The names never clash with the stock plugins, but both panels would draw a band, so only one should be enabled. The README's "Using it next to savvy" has the commands.
 
 ## Sprite packs
 
@@ -66,11 +68,11 @@ export type Pack = {
 
 `who` carries both role and tier because Clawd dresses by tier (astronaut expert, formerly fable; detective heavy, hard-hat careful, chef medium, racer light, pirate scout) while the other packs dress by role. A pack uses whichever it wants.
 
+The registry `hooks/packs/index.ts` lists the packs, and the panel draws only through it, never a pack directly. CSS from every pack is scoped under its own `.p-<id>` class so two packs never collide in a gallery.
+
 ### Roles
 
 The orchestrator sets a `role` on every planned task in `mcp__relay-panel__progress`: `builder` (features, changes), `fixer` (debugging, root cause), `tester` (builds, tests, checks) or `scout` (searching, reading code). A relay worker wears the role of the planned task its description matches; with no match, or no role, it is a builder. The main session is the `conductor`, the built-in Explore agent a `scout`, any other subagent `plain`. Nothing is inferred from task text. The tier colour tints the costume's main piece as well as the collar.
-
-The registry `hooks/packs/index.ts` lists the packs. The panel draws through `activePack().draw(...)`, never a pack directly. CSS from every pack is scoped under its own `.p-<id>` class so two packs never collide in a gallery.
 
 ### Packs
 
@@ -101,7 +103,7 @@ The store wins over the options. All keys persist across sessions, per plugin, w
 | Nov 15-30 | `turkeys` |
 | Dec 1-31 | `christmas` |
 
-`OFF_SEASON` (`clawd`, also `DEFAULT_PACK`) is the fallback. A stored id that is no longer registered (such as the former `crabs`) falls back to it.
+`OFF_SEASON` (`clawd`, also `DEFAULT_PACK`) is the fallback.
 
 **Resolution** (`resolvePack` in `seasons.ts`, pure, unit-tested):
 
@@ -116,7 +118,7 @@ The store wins over the options. All keys persist across sessions, per plugin, w
 
 - **Live**: session atom `{ plugin: 'relay-panel', key: 'pack' }` holds the id showing, written only when it changes. The band and panel read it while drawing, so a write redraws both at once; no restart.
 - **Cost**: checked at session start and when a new /relay plan starts (the `progress` call that starts a new flow: none before, the last one finished, or a new title). Each check re-resolves without a new shuffle and writes the atom only if the id changed; the same flow's later calls, and a worker's call, do not check. No timer; nothing checks per render or per tick.
-- Unknown stored id (pack removed): fall back to the option and say so once.
+- Unknown stored id (a removed pack, such as the former `crabs`): ignored; the `pack` option applies, then `DEFAULT_PACK`.
 
 Why not a settings key: writing `settings.json` from a mod is heavier, and the options already cover "set it in config".
 
@@ -135,21 +137,5 @@ Why not a settings key: writing `settings.json` from a mod is heavier, and the o
 
 - `claude plugin validate` on both plugins and the marketplace root.
 - `claude plugin test plugins/relay-panel`: the fork's tests ported (renamed tools and ids), plus per-pack tests (every role draws, `variantOf` stable, CSS scoped, width/height honoured) and a pack-swap test (set → atom changes → drawn SVG changes pack class).
-- Visual: render each pack's gallery to HTML and look at it in the browser; screenshot the live panel in Claude Code after swapping.
+- Visual: `bun scripts/preview.ts` renders each pack's gallery to `docs/preview/`; look at it in the browser, and at the live panel in Claude Code after swapping.
 - Install test: add the marketplace from the local path, install both, confirm tool names and `/relay-agents`, `/relay-pack` appear.
-
-## Out of scope
-
-- Pushing to GitHub (remote added later on request).
-- Changing the stock plugins, the dev-mods fork or `~/.claude/CLAUDE.md`.
-- New orchestration rules: the skill text is copied with renames only; your global rules in `~/.claude/CLAUDE.md` keep applying on top.
-
-## Coexistence
-
-Both panels would draw a band and auto-open on plan reports. After installing relay, disable `savvy-progress@claude-kit` and the dev-mods `savvy-progress` fork. `savvy-flow@claude-kit` can stay installed (different names) but it is simpler to disable it too, and to point the `savvy-flow-auto` user skill at relay or remove it so two orchestrator skills don't both trigger.
-
-## Open questions
-
-1. Keep the five tier names (light … expert) as is? Settled: the top tier is `expert`, formerly `fable`; the panel still reads `fable` and `relay-fable` as expert.
-2. Clawd variants: one clay colour, or a few tints? Settled: one.
-3. Should `/relay` stay model-invocable (auto) or be manual like `/savvy-flow`? Default: auto, since that's how you use it now.

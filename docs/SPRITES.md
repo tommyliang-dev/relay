@@ -61,5 +61,5 @@ A themed pack may reinterpret each costume for its theme. It must keep the role 
 ## Verification
 
 - Tests: `claude plugin test plugins/relay-panel` (pack fields, every role draws, stable variants, scoped CSS).
-- **Look at it.** Render a gallery of every variant × every role, walking, at 3-4×, on a light row *and* a dark row, and view it in the browser. Then check one row at panel scale (1×), where 1-pixel details disappear. Galleries live in `docs/preview/<id>.html`.
+- **Look at it.** Render a gallery of every variant × every role, walking, at 3-4×, on a light row *and* a dark row, and view it in the browser. Then check one row at panel scale (1×), where 1-pixel details disappear. `bun scripts/preview.ts` writes the galleries to `docs/preview/<id>.html` (not committed).
 - Things that went wrong before: a page without `<meta charset="utf-8">` garbles `·` and `…`; white sprites with white outlines vanish on light rows.
