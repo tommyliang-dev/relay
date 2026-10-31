@@ -137,5 +137,5 @@ Why not a settings key: writing `settings.json` from a mod is heavier, and the o
 
 - `claude plugin validate` on both plugins and the marketplace root.
 - `claude plugin test plugins/relay-panel`: the fork's tests ported (renamed tools and ids), plus per-pack tests (every role draws, `variantOf` stable, CSS scoped, width/height honoured) and a pack-swap test (set → atom changes → drawn SVG changes pack class).
-- Visual: render each pack's gallery to HTML and look at it in the browser; screenshot the live panel in Claude Code after swapping.
+- Visual: `bun scripts/preview.ts` renders each pack's gallery to `docs/preview/`; look at it in the browser, and at the live panel in Claude Code after swapping.
 - Install test: add the marketplace from the local path, install both, confirm tool names and `/relay-agents`, `/relay-pack` appear.

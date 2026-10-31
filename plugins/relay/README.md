@@ -26,32 +26,11 @@ The agent files use the short aliases (`sonnet`, `opus`), which track the newest
 
 ## Model presets
 
-To override the defaults, add a `## Relay models` block to your CLAUDE.md. The orchestrator then passes that model and effort on every worker call:
-
-```
-## Relay models
-- light: sonnet, low
-- medium: sonnet, medium
-- careful: sonnet, high
-- heavy: opus, high
-- expert: opus, xhigh
-```
-
-Presets, exact models as of October 2026:
-
-| Tier | Default (no block needed) | Baller | Budget |
-| --- | --- | --- | --- |
-| light | Sonnet 5.5, low | Opus 5.5, low | Haiku 5.5, low |
-| medium | Sonnet 5.5, medium | Opus 5.5, medium | Haiku 5.5, medium |
-| careful | Sonnet 5.5, high | Opus 5.5, high | Sonnet 5.5, medium |
-| heavy | Opus 5.5, high | Opus 5.5, xhigh | Sonnet 5.5, high |
-| expert | Opus 5.5, xhigh | Fable 5.1, xhigh (needs Fable access) | Opus 5.5, high |
-
-Custom: any model and effort per tier. In the block, write the aliases: `haiku`, `sonnet`, `opus`, `fable`. Default needs no block; delete the block to go back to it. expert runs on Opus 5.5 unless you choose Baller. If your account cannot use a listed model, that tier falls back to its default and the orchestrator says so once.
+To override the defaults, add a `## Relay models` block to your CLAUDE.md, one line per tier (`- light: sonnet, low`). The orchestrator passes that model and effort on every worker call; without a block the defaults above apply. The presets (Default, Baller, Budget) and the exact models are in the [repository README](../../README.md#choosing-models).
 
 ## With relay-panel
 
-relay works on its own. With [relay-panel](../relay-panel) installed, the flow drives the progress bar and workers report their steps to the agents panel.
+relay works on its own. With [relay-panel](../relay-panel) installed, the flow drives the progress bar and workers report their steps to the agents panel. Each planned task carries a role (builder, fixer, tester or scout), which the panel draws as the worker's costume.
 
 ## Install
 

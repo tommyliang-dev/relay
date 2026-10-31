@@ -265,7 +265,7 @@ Help me make a new relay sprite pack:
 1. Read docs/SPRITES.md and plugins/relay-panel/hooks/packs/types.ts first.
 2. Build plugins/relay-panel/hooks/packs/<id>.ts with its tests, following an existing pack.
 3. Register it in plugins/relay-panel/hooks/packs/index.ts. An everyday pack also goes in the `pack` option's list in plugins/relay-panel/.claude-plugin/plugin.json; a holiday pack goes in SEASONS in plugins/relay-panel/hooks/packs/seasons.ts instead.
-4. Render the gallery in docs/preview/ and look at it before you call it done.
+4. Run `bun scripts/preview.ts`, open docs/preview/ and look at the pack before you call it done.
 5. Run claude plugin test plugins/relay-panel.
 ```
 
@@ -301,10 +301,8 @@ claude plugin validate plugins/relay-panel
 claude plugin test plugins/relay-panel
 ```
 
-How packs are built: `docs/SPRITES.md`. Pack galleries: `docs/preview/`.
+How packs are built: `docs/SPRITES.md`. Pack galleries: `bun scripts/preview.ts` writes them to `docs/preview/` (not committed).
 
-## Credits and license
+## License
 
-relay is based on **savvy-flow** and **savvy-progress** by johnnyvizz, from [claude-kit](https://github.com/johnnyvizz/claude-kit). The core design and all credit for it are theirs.
-
-MIT, as the original.
+MIT, as the original (see [Credit](#credit)).
