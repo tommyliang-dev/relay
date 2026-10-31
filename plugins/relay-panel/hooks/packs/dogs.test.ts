@@ -52,26 +52,26 @@ test('dogs: every role and breed draws inside the grid with the accent collar', 
 
 test('dogs: tier does not change the drawing', () => {
   const o = { variant: 'husky', accent: ACCENT }
-  expect(dogs.draw(0, 0, { role: 'developer', tier: 'expert' }, o)).toBe(dogs.draw(0, 0, { role: 'developer', tier: 'light' }, o))
+  expect(dogs.draw(0, 0, { role: 'builder', tier: 'expert' }, o)).toBe(dogs.draw(0, 0, { role: 'builder', tier: 'light' }, o))
 })
 
 test('dogs: placement, mirror, dim, walking and fallbacks', () => {
-  const plain = dog(10, 4, 'developer', { variant: 'shiba', accent: ACCENT })
+  const plain = dog(10, 4, 'builder', { variant: 'shiba', accent: ACCENT })
   expect(plain).toContain('transform="translate(10,4) scale(1)"')
   expect(plain).toContain('opacity="1"')
-  const mirrored = dog(10, 4, 'developer', { variant: 'shiba', accent: ACCENT, mirror: true, scale: 2 })
+  const mirrored = dog(10, 4, 'builder', { variant: 'shiba', accent: ACCENT, mirror: true, scale: 2 })
   expect(mirrored).toContain(`transform="translate(${10 + DOG_W * 2},4) scale(-2,2)"`)
-  expect(dog(0, 0, 'planner', { variant: 'corgi', accent: ACCENT, dim: true })).toContain('opacity="0.45"')
-  expect(dog(0, 0, 'planner', { variant: 'corgi', accent: ACCENT, isWalking: true })).toContain('class="dog d-planner run"')
-  expect(dog(0, 0, 'nope', { variant: 'plaid', accent: ACCENT })).toBe(dog(0, 0, 'other', { variant: BREEDS[0], accent: ACCENT }))
+  expect(dog(0, 0, 'tester', { variant: 'corgi', accent: ACCENT, dim: true })).toContain('opacity="0.45"')
+  expect(dog(0, 0, 'tester', { variant: 'corgi', accent: ACCENT, isWalking: true })).toContain('class="dog d-tester run"')
+  expect(dog(0, 0, 'nope', { variant: 'plaid', accent: ACCENT })).toBe(dog(0, 0, 'plain', { variant: BREEDS[0], accent: ACCENT }))
 })
 
 test('dogs: CSS is one scoped style block with dogs-* keyframes', () => {
   expect(dogs.css.startsWith('<style>') && dogs.css.endsWith('</style>')).toBe(true)
-  expect(dogs.css).toContain('.p-dogs .d-planner.run .c3')
-  expect(dogs.css).toContain('animation:dogs-tick')
-  expect(dogs.css).toContain('.p-dogs .dog.run .tl')
-  expect(dogs.css).toContain('@keyframes dogs-wag')
+  expect(dogs.css).toContain('.p-dogs .d-tester.run .c3')
+  expect(dogs.css).toContain('animation:dogs-t3 1s')
+  expect(dogs.css).toContain('.p-dogs .run .tw{animation:dogs-on')
+  expect(dogs.css).not.toMatch(/rotate|scale\(/)
   expect(dogs.css).toContain('.p-dogs .run,.p-dogs .run g{animation:none!important}')
   expect(/animation:(?!dogs-|none)/.test(dogs.css)).toBe(false)
 })

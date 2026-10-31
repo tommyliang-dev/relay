@@ -17,10 +17,10 @@ plugins/
     hooks/packs/index.ts               registry: list, get, default
     hooks/packs/seasons.ts             season table: which pack auto mode draws, next change
     hooks/packs/cats.ts                British Shorthair cats
-    hooks/packs/crabs.ts               pixel crabs (stock costumes)
+    hooks/packs/clawd.ts               Clawd, the pixel crab (costumes by tier)
     hooks/packs/dogs.ts                pixel dogs (6 breeds, costumes by role)
     hooks/packs/turkeys.ts             Thanksgiving turkeys (6 heritage breeds, costumes by role)
-    hooks/packs/christmas.ts           Christmas cast: Santa, Mrs Claus, elves, sled, reindeer
+    hooks/packs/christmas.ts           Christmas cast: Santa, gingerbread, nutcracker, Mrs Claus, elf, reindeer
     hooks/packs/contract.test.ts       Pack contract, looped over every registered pack
     hooks/*.test.ts(x), packs/*.test.ts
     skills/relay-pack/SKILL.md         list / preview / swap packs

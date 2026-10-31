@@ -74,7 +74,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
   })
 }
 
-// With the cats pinned, every panel row draws a British Shorthair; no crab survives in the drawing.
+// With the cats pinned, every panel row draws a British Shorthair; nothing of Clawd survives in the drawing.
 test('desktop: a running relay worker draws as a cat in its costume', async ($, on) => {
   mock.clock(on)
   mock.store(on, { everyday: 'cats', seasons: false })
@@ -94,17 +94,59 @@ test('desktop: a running relay worker draws as a cat in its costume', async ($, 
 
   const ui = await $.ui.mount({ plugin: PLUGIN, surface: 'desktop', component: 'Pane', requestId: 'relay-agents', props: pane })
   const drawn = (await ui.findAll({ type: 'Svg' })).map(el => String(el.props.source)).join('')
-  expect(drawn).toContain('class="c-developer run"')
-  expect(drawn).toContain('@keyframes cats-swish')
-  // The crab stylesheet's fencing keyframes and class names are gone.
-  expect(drawn).not.toMatch(/crab|@keyframes fence/i)
+  // A worker with no planned task is a builder.
+  expect(drawn).toContain('class="c-builder run"')
+  expect(drawn).toContain('@keyframes cats-on')
+  expect(drawn).not.toMatch(/clawd/i)
+})
+
+// The orchestrator sets each task's role; a run wears the role of the task its description matches.
+test('desktop: a worker wears the role of its planned task', async ($, on) => {
+  mock.clock(on)
+  mock.store(on, { everyday: 'cats', seasons: false })
+  mock.env(on, { LANG: 'en_US.UTF-8' })
+  const schemas: Record<string, unknown> = {}
+  on('settings.read', async () => ({ value: {} }) as never)
+  on('session.start', async () => ({ cwd: '/repo' }) as never)
+  on('tool.register', (_$, e) => {
+    const { name, inputSchema } = e as { name?: string; inputSchema?: unknown }
+    schemas[String(name)] = inputSchema
+    return { value: { tool: String(name) } } as never
+  })
+  on('command.register', (_$, e) => ({ value: { command: String((e as { name?: string }).name) } }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }))
+  on('agent.spawn', () => ({ model: 'claude-opus-5-5', agentId: 'a1' }))
+  on('turn.complete', () => ({ text: '' }) as never)
+  on('turn.step', async function* () {
+    return { turnId: 'turn', index: 0, answer: '', toolUses: [], stopReason: 'end_turn', usage: null } as never
+  })
+  await $.session.start({ source: 'startup', cwd: '/repo', surface: 'desktop', isInteractive: true } as never)
+  expect(JSON.stringify(schemas.progress)).toContain('"enum":["builder","fixer","tester","scout"]')
+
+  const tasks = [
+    { title: 'Find the flaky test', tier: 'heavy', role: 'fixer' },
+    { title: 'Run the suite', tier: 'light', role: 'tester' },
+    { title: 'Map the auth flow', tier: 'medium', role: 'scout' },
+    { title: 'Design the settings page', tier: 'medium', role: 'nope' },
+  ]
+  await $.tool.call({ tool: PROGRESS, title: 'Roles', phase: 'delegate', tasks } as never)
+  await $.agent.spawn({ tool_use_id: 't1', prompt: 'p', description: 'Find the flaky test', subagentType: 'relay:relay-heavy', provider: 'engine', parentModel: 'claude-opus-5-5', background: true, fork: false } as never)
+
+  const ui = await $.ui.mount({ plugin: PLUGIN, surface: 'desktop', component: 'Pane', requestId: 'relay-agents', props: pane })
+  const drawn = (await ui.findAll({ type: 'Svg' })).map(el => String(el.props.source)).join('')
+  expect(drawn).toContain('class="c-fixer run"')
+  // Planned rows wear their roles too; an unknown role is a builder, not a word match.
+  expect(drawn).toContain('class="c-tester"')
+  expect(drawn).toContain('class="c-scout"')
+  expect(drawn).toContain('class="c-builder"')
+  expect(drawn).not.toContain('c-designer')
 })
 
 // The top tier is `expert`, formerly `fable`: the old name still works as a planned tier
 // and as an agent type (`relay-fable`, from older installs), and both draw as expert.
 test('desktop: the tier fable is read as expert, in plans and in agent types', async ($, on) => {
   mock.clock(on)
-  mock.store(on, { everyday: 'crabs', seasons: false })
+  mock.store(on, { everyday: 'clawd', seasons: false })
   mock.env(on, { LANG: 'en_US.UTF-8' })
   const schemas: Record<string, unknown> = {}
   on('settings.read', async () => ({ value: {} }) as never)
@@ -131,7 +173,7 @@ test('desktop: the tier fable is read as expert, in plans and in agent types', a
 
   const ui = await $.ui.mount({ plugin: PLUGIN, surface: 'desktop', component: 'Pane', requestId: 'relay-agents', props: pane })
   const drawn = (await ui.findAll({ type: 'Svg' })).map(el => String(el.props.source)).join('')
-  // Two planned rows and one run, all expert: purple, the astronaut crab, Opus · xhigh for the plans.
+  // Two planned rows and one run, all expert: purple, the astronaut Clawd, Opus · xhigh for the plans.
   expect(drawn.split('<tspan fill="#7F77DD">expert</tspan>').length).toBe(4)
   expect(drawn.split('class="c-expert').length).toBe(4)
   expect(drawn).toContain('Opus · xhigh')

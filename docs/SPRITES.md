@@ -10,29 +10,30 @@ The foundation for every new pack. The contract is `plugins/relay-panel/hooks/pa
 
 ## Canvas and anatomy
 
-- 32×28 grid units, profile facing right, rendered as `<rect>`s with `shape-rendering="crispEdges"`. Crabs use 30×28. The panel fits any size: the band uses scale `min(0.75, 21/h)`, panel rows `min(1, 36/w, 32/h)`. Stay at or under 32×28 to keep the cats' spacing.
+- 32×28 grid units, profile facing right, rendered as `<rect>`s with `shape-rendering="crispEdges"`. Clawd uses 30×28. The panel fits any size: the band uses scale `min(0.75, 21/h)`, panel rows `min(1, 36/w, 32/h)`. Stay at or under 32×28 to keep the cats' spacing.
 - The body sits 2 rows down (`DY = 2`), so tall hats fit above it.
 - **Silhouette first.** Every filled pixel next to empty space becomes outline, in a darker shade of the sprite's own coat. The shape reads with no interior detail.
 - Tones per coat: outline, shadow, base, highlight, plus small accents (nose, iris, inner ear, `ink` for props). Multi-tone coats add a second tone set and a pattern rule that says which pixels wear it (bicolour, van, point).
 - **Pale coats need a grey outline**, or they vanish on light rows (white cat, samoyed, maltese).
-- **The collar always carries the tier accent, in the same place.** It's the one thing that tells tiers apart in packs that dress by role.
+- **The tier accent tints the costume's main piece** (hat, headphone cups, clipboard, bandana) **and the collar, in the same place.** It's what tells tiers apart in packs that dress by role.
 - A lifted front paw (`hold`) is the anchor for held props (laptop, clipboard, brush, baton, tube, cutlass), so props line up across costumes.
 
 ## Costumes by role
 
 Every role-dressed pack keeps the same costume meanings, so the panel reads the same whichever pack is active:
 
-| Role | Costume (cats and dogs) |
-|---|---|
-| orchestrator | top hat and bow tie, conducting with a baton |
-| planner | spectacles, clipboard |
-| architect | flat cap, blueprint tube |
-| developer | headphones, laptop |
-| designer | beret, palette and brush |
-| explore | pirate: bandana, eye patch, cutlass |
-| other | plain, collar only |
+| Role | Who wears it | Costume (cats) |
+|---|---|---|
+| conductor | the main session | top hat and bow tie, conducting with a baton |
+| builder | features and changes | headphones, laptop |
+| fixer | debugging, root cause | flat cap, wrench |
+| tester | builds, tests, checks | spectacles, clipboard |
+| scout | searching code; the Explore agent | pirate: bandana, eye patch, spyglass |
+| plain | any non-relay subagent | plain, collar only |
 
-Crabs dress by tier instead (expert astronaut, formerly fable; heavy detective, careful hard hat, medium chef, light racer). A pack picks one scheme; role is the default.
+The orchestrator sets the role per planned task (`role` in `mcp__relay-panel__progress`); nothing is guessed from task text.
+
+Clawd dresses by tier instead (expert astronaut, formerly fable; heavy detective, careful hard hat, medium chef, light racer). A pack picks one scheme; role is the default.
 
 A themed pack may reinterpret each costume for its theme. It must keep the role readable at a glance: same kind of hat and same kind of held prop in the same place.
 
@@ -45,6 +46,7 @@ A themed pack may reinterpret each costume for its theme. It must keep the role 
 
 - Pure CSS, running only on `.run` (a running worker). No redraws, so animation costs nothing between frames.
 - Named groups: `bd` body, `la` / `lb` leg pairs, `tl` tail, plus one group per moving prop.
+- Move parts by whole pixels. A smooth `rotate` on a pixel part leaves the grid and tears it from the body (the cats' tail did); swap between drawn poses with `steps(1)` instead, and keep attached parts inside `bd` so they share its bob. Never nest a second `bd`: it bobs twice.
 - Legs `steps(1)` over .5s, the two pairs half a cycle apart; body bob a quarter cycle off; tail swish 1.2s ease-in-out. Periods should divide 1s, because the running rows redraw once a second.
 - Each costume adds one prop motion: the baton conducts, the brush dabs, the clipboard ticks, the laptop screen blinks.
 - `transform-box: fill-box` on groups, so transform origins are relative to the group.

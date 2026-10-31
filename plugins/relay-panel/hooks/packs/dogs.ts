@@ -48,12 +48,54 @@ type Breed = {
   topknot?: Seg[] // drawn only when no hat covers the crown
 }
 
-// A straight leg: `w` wide from y0 to y25, the paw one pixel longer forward.
-const leg = (x: number, y0: number, w: number, ch: string, top = ''): Seg[] => {
-  const segs: Seg[] = []
-  for (let y = y0; y <= 25; y++) segs.push([x, y, y === 25 ? ch.repeat(w + 1) : y - y0 < top.length ? top[y - y0].repeat(w) : ch.repeat(w)])
-  return segs
+// --- legs ----------------------------------------------------------------------------------
+// Legs are drawn in pairs: the hind pair under the rump, the fore pair under the chest, with
+// the belly tucked up between them. Templates use T thigh/upper, L leg, P paw, F feathering;
+// each breed maps those to its own coat letters. Column 0 is the back of the leg.
+// Hind: a round thigh out of the rump, the stifle forward, the lower leg stepping back to
+// the hock, then down to a paw one pixel wider than the leg, toes forward.
+const HIND: Record<number, string[]> = {
+  7: ['.TTTTT', 'TTTTTTT', '.TTTTT', '.LLLL', 'LLLL', 'LLLL', 'PPPPP'],
+  6: ['.TTTTT', 'TTTTTT', '.LLLL', 'LLLL', 'LLLL', 'PPPPP'],
+  5: ['TTTTTT', 'TTTTTT', 'LLLLL', 'LLLL', 'PPPPP'],
+  3: ['LLLL', 'LLLL', 'PPPPP'],
 }
+// Fore: straight under the chest, thicker at the top, a small forward paw.
+const FORE: Record<number, string[]> = {
+  7: ['TTTTT', 'TTTTT', '.LLLL', '.LLLL', '.LLLL', '.LLLL', '.PPPPP'],
+  6: ['TTTTT', 'TTTTT', '.LLLL', '.LLLL', '.LLLL', '.PPPPP'],
+  5: ['TTTTT', 'LLLLL', '.LLLL', '.LLLL', '.PPPPP'],
+  3: ['LLLL', 'LLLL', 'PPPPP'],
+}
+// Samoyed: the same shapes with a fringe of fur down the back of each leg.
+const HIND_FLUFF = ['..TTTTT', '.TTTTTTT', '..TTTTT', '.FLLLL', 'FLLLL', 'FLLLL', '.PPPPP']
+const FORE_FLUFF = ['.TTTTT', '.TTTTT', 'FFLLLL', 'FFLLLL', '.FLLLL', '..LLLL', '..PPPPP']
+
+type LegTones = { T: string; L: string; P: string; F?: string }
+// The far side of the coat: base and highlight drop to shadow.
+const SHADE: Record<string, string> = { b: 's', h: 's', s: 's', w: 'v', u: 'v', v: 'v' }
+const stamp = (x0: number, y0: number, rows: string[], tones: LegTones, far = false): Seg[] =>
+  rows.map((row, i): Seg => [x0, y0 + i, row.replace(/[TLPF]/g, c => {
+    const ch = tones[c as keyof LegTones] ?? tones.L
+    return far ? SHADE[ch] ?? ch : ch
+  })])
+
+// `top` is the body's bottom row, which the near thigh overlaps so it flows out of the rump.
+// Far legs sit one row higher and a little apart, in shadow, half hidden behind the body.
+type LegPlan = {
+  top: number; hind: number; fore: number; hindRows: string[]; foreRows: string[]
+  hindTones: LegTones; foreTones: LegTones; farHind?: number; farFore?: number
+}
+const legsFor = (p: LegPlan): Legs => ({
+  backNear: stamp(p.hind, p.top, p.hindRows, p.hindTones),
+  backFar: stamp(p.hind + (p.farHind ?? 2), p.top - 1, p.hindRows, p.hindTones, true),
+  frontNear: stamp(p.fore, p.top, p.foreRows, p.foreTones),
+  frontFar: stamp(p.fore + (p.farFore ?? -2), p.top - 1, p.foreRows, p.foreTones, true),
+})
+
+// Blanks the body's bottom row between x1 and x2: the belly tucks up between the pairs.
+const tuck = (body: Seg[], x1: number, x2: number): Seg[] =>
+  body.map(([x, y, row], i): Seg => (i === body.length - 1 ? [x, y, [...row].map((c, j) => (x + j >= x1 && x + j <= x2 ? '.' : c)).join('')] : [x, y, row]))
 
 // --- breeds ----------------------------------------------------------------------------------
 // The lifted near front paw: the forearm rises from the elbow under the chest to the pad
@@ -87,7 +129,7 @@ const HUSKY: Breed = {
     '....bbbw',
     '.....bbw',
   ]),
-  body: pic(0, [
+  body: tuck(pic(0, [
     '...................b',
     '...............s..bib',
     '..............ss.biib',
@@ -108,13 +150,8 @@ const HUSKY: Breed = {
     '.....sbbbbbbbbbbbbbbbbwww',
     '......ssssbbbbbbbbbbbwwww',
     '.......vwwwwwwwwwwwwwwww',
-  ]),
-  legs: {
-    backFar: leg(10, 20, 3, 'v'),
-    backNear: [[6, 20, 'wwww'], [6, 21, 'wwww'], [7, 22, 'www'], [7, 23, 'www'], [7, 24, 'www'], [7, 25, 'wwww']],
-    frontFar: leg(16, 20, 3, 'v'),
-    frontNear: leg(19, 20, 3, 'w'),
-  },
+  ]), 13, 16),
+  legs: legsFor({ top: 19, hind: 5, fore: 18, hindRows: HIND[7], foreRows: FORE[7], hindTones: { T: 'b', L: 'w', P: 'w' }, foreTones: { T: 'b', L: 'w', P: 'w' } }),
   collar: [[14, 9, 'AAA'], [14, 10, 'AAA'], [15, 11, 'AAAA'], [16, 12, 'AAAAAA'], [20, 13, 'g']],
   arm: raised('w', 'w', 'u'),
   devArm: reaching('w', 'w', 'u'),
@@ -138,7 +175,7 @@ const CORGI: Breed = {
     '.bbhbb',
     '..bbbb',
   ]),
-  body: pic(1, [
+  body: tuck(pic(1, [
     '...................b',
     '..............s...bib',
     '.............ss...biib',
@@ -160,13 +197,8 @@ const CORGI: Breed = {
     '..bbbbbbbbbbbbbbbbbbbwww',
     '..sbbbbbbbbbbbbbbbbbbwww',
     '...ssswwwwwwwwwwwwwwwww',
-  ]),
-  legs: {
-    backFar: leg(8, 22, 3, 'v'),
-    backNear: leg(4, 22, 4, 'w', 'b'),
-    frontFar: leg(16, 22, 3, 'v'),
-    frontNear: leg(19, 22, 3, 'w'),
-  },
+  ]), 10, 13),
+  legs: legsFor({ top: 21, hind: 3, fore: 16, hindRows: HIND[5], foreRows: FORE[5], hindTones: { T: 'b', L: 'b', P: 'w' }, foreTones: { T: 'w', L: 'w', P: 'w' } }),
   collar: [[13, 11, 'AAA'], [13, 12, 'AAA'], [14, 13, 'AAAA'], [15, 14, 'AAAAAA'], [19, 15, 'g']],
   arm: raised('w', 'w', 'u'),
   devArm: reaching('w', 'w', 'u'),
@@ -189,7 +221,7 @@ const SAMOYED: Breed = {
     '...bbsssss',
     '....bbs',
   ]),
-  body: pic(1, [
+  body: tuck(pic(1, [
     '...............s...bb',
     '..............sss.bibb',
     '..............sssbiibb',
@@ -209,14 +241,8 @@ const SAMOYED: Breed = {
     '.....sbbbbbbbbbbbbbbbbbbbb',
     '......ssssbbbbbbbbbbbbbbb',
     '.......sbbsbbsbbsbbsbbsbb',
-    '.............b.b......b',
-  ]),
-  legs: {
-    backFar: leg(10, 20, 3, 's'),
-    backNear: [[6, 20, 'bbbb'], [6, 21, 'bbbb'], [7, 22, 'bbbb'], [7, 23, 'bbb'], [7, 24, 'bbb'], [7, 25, 'bbbb']],
-    frontFar: leg(16, 20, 3, 's'),
-    frontNear: leg(19, 20, 4, 'b'),
-  },
+  ]), 13, 16),
+  legs: legsFor({ top: 19, hind: 4, fore: 17, hindRows: HIND_FLUFF, foreRows: FORE_FLUFF, hindTones: { T: 'b', L: 'b', P: 'b', F: 'h' }, foreTones: { T: 'b', L: 'b', P: 'b', F: 'h' } }),
   collar: [[14, 9, 'AAA'], [14, 10, 'AAA'], [15, 11, 'AAAA'], [16, 12, 'AAAAAA'], [20, 13, 'g']],
   arm: raised('b', 'b', 'h'),
   devArm: reaching('b', 'b', 'h'),
@@ -239,7 +265,7 @@ const BICHON: Breed = {
     '..bbb...sb',
     '...bbb',
   ]),
-  body: pic(4, [
+  body: tuck(pic(4, [
     '.................bb.bbb',
     '...............bbbbbbbbbb',
     '..............bbbbhhhhbbbb',
@@ -257,18 +283,13 @@ const BICHON: Breed = {
     '.....bbbbbbbbbbbbbbbbbbb',
     '.....sbbbbbbbbbbbbbbbbbb',
     '......sssbbbbbbbbbbbbbb',
-  ]),
-  legs: {
-    backFar: leg(10, 21, 3, 's'),
-    backNear: leg(6, 21, 4, 'b'),
-    frontFar: leg(15, 21, 3, 's'),
-    frontNear: leg(18, 21, 4, 'b'),
-  },
+  ]), 12, 14),
+  legs: legsFor({ top: 20, hind: 5, fore: 17, hindRows: HIND[6], foreRows: FORE[6], hindTones: { T: 'b', L: 'b', P: 'b' }, foreTones: { T: 'b', L: 'b', P: 'b' } }),
   collar: [[12, 12, 'AA'], [13, 13, 'AA'], [14, 14, 'AAA'], [16, 15, 'AAAA'], [19, 16, 'g']],
   arm: raised('b', 'b', 'h'),
   devArm: reaching('b', 'b', 'h'),
   head: [0, 2],
-  hats: { designer: [-3, 1], architect: [-2, 1], orchestrator: [-4, 0] },
+  hats: { fixer: [-2, 1], conductor: [-4, 0] },
   eye: [-1, 2],
   neck: [-1, 2],
 }
@@ -310,12 +331,7 @@ const MALTESE: Breed = {
     '.bbbbbbsbbbbbbbsbbbbbbsbbb',
     '.b.bb.bbb.bb.bbb.bb.bbb.bb',
   ]),
-  legs: {
-    backFar: leg(9, 24, 3, 's'),
-    backNear: leg(6, 24, 3, 'b'),
-    frontFar: leg(16, 24, 3, 's'),
-    frontNear: leg(19, 24, 3, 'b'),
-  },
+  legs: legsFor({ top: 23, hind: 6, fore: 18, hindRows: HIND[3], foreRows: FORE[3], hindTones: { T: 'b', L: 'b', P: 'b' }, foreTones: { T: 'b', L: 'b', P: 'b' } }),
   collar: [[13, 10, 'AA'], [13, 11, 'AAA'], [14, 12, 'AA'], [17, 12, 'AAA'], [19, 13, 'AAA'], [21, 14, 'g']],
   arm: raised('b', 'b', 'h'),
   devArm: reaching('b', 'b', 'h'),
@@ -344,7 +360,7 @@ const SHIBA: Breed = {
     '.....bbb',
     '.....bb',
   ]),
-  body: pic(1, [
+  body: tuck(pic(1, [
     '..................bb',
     '..............ss.bibb',
     '..............sssbiibb',
@@ -364,13 +380,8 @@ const SHIBA: Breed = {
     '.....sbbbbbbbbbbbbbbbbwww',
     '......ssssbbbbbbbbbbbwwww',
     '.......vwwwwwwwwwwwwwwww',
-  ]),
-  legs: {
-    backFar: leg(10, 20, 3, 'v'),
-    backNear: [[6, 20, 'bbbb'], [6, 21, 'bbbw'], [7, 22, 'bbw'], [7, 23, 'bbw'], [7, 24, 'www'], [7, 25, 'wwww']],
-    frontFar: leg(16, 20, 3, 'v'),
-    frontNear: leg(19, 20, 3, 'w', 'bbbb'),
-  },
+  ]), 13, 16),
+  legs: legsFor({ top: 19, hind: 5, fore: 18, hindRows: HIND[7], foreRows: FORE[7], hindTones: { T: 'b', L: 'b', P: 'w' }, foreTones: { T: 'b', L: 'b', P: 'w' } }),
   collar: [[14, 10, 'AAA'], [14, 11, 'AAA'], [15, 12, 'AAAA'], [16, 13, 'AAAAAA'], [20, 14, 'g']],
   arm: raised('b', 'w', 'u'),
   devArm: reaching('b', 'w', 'u'),
@@ -413,14 +424,17 @@ const PROP: Record<string, string> = {
 
 const r = (ch: string, n: number) => ch.repeat(n)
 
+// The tier colour ('A' in a map value) tints each costume's main piece, as well as the collar.
+// Held props sit at the lifted paw (pad at x25-27, y16-17), one row above the cats' paw.
 const COSTUMES: Record<string, Costume> = {
-  // headphones + laptop; the screen flickers
-  developer: {
+  // builder: headphones + laptop; the screen flickers
+  builder: {
     hold: true,
     layers: [
       {
         // band rises in front of the ear, over the crown, down to a round cup at the ear base
         at: 'head',
+        map: { K: 'A' },
         segs: [
           [21, 1, 'ww'], [21, 2, 'kk'], [21, 3, 'kk'], [20, 4, 'kk'], [18, 5, 'kkk'],
           [15, 6, 'kkkk'], [15, 7, 'kKKk'], [15, 8, 'kKKk'], [15, 9, 'kKKk'], [16, 10, 'kk'],
@@ -438,31 +452,10 @@ const COSTUMES: Record<string, Costume> = {
       },
       { g: 'cur', ground: true, map: { b: '#EAF2FF' }, segs: [[30, 18, 'b'], [29, 21, 'b']] },
     ],
-    anim: '.p-dogs .d-developer.run .cur{animation:dogs-blink 1s steps(1) infinite}',
+    anim: '.p-dogs .d-builder.run .cur{animation:dogs-blink 1s steps(1) infinite}',
   },
-  // beret + brush + palette; the brush dabs
-  designer: {
-    hold: true,
-    hat: true,
-    layers: [
-      {
-        // a flat disc tipped forward over the brow, in front of the ears
-        at: 'head',
-        map: { r: '#C04257', R: '#8E2332' },
-        segs: [[24, 1, 'r'], [21, 2, r('r', 7)], [20, 3, r('r', 9)], [21, 4, r('R', 4)]],
-      },
-      {
-        g: 'gd',
-        ground: true,
-        map: { p: '#C9955A', r: '#D0453F', b: '#2F6FD6', e: '#3B9C5F' },
-        segs: [[25, 23, 'ppppp'], [24, 24, 'prpbyp'], [24, 25, 'ppeppp']],
-      },
-      { g: 'it', map: { r: '#D0453F' }, segs: [[28, 17, 'o'], [29, 16, 'o'], [30, 15, 'rr'], [30, 14, 'rr']] },
-    ],
-    anim: '.p-dogs .d-designer.run .it{animation:dogs-dab .5s steps(1) infinite}',
-  },
-  // spectacles + clipboard; the checks tick in one by one
-  planner: {
+  // tester: spectacles + clipboard; the boxes check in one by one
+  tester: {
     hold: true,
     layers: [
       {
@@ -472,85 +465,98 @@ const COSTUMES: Record<string, Costume> = {
         segs: [[23, 6, 'kkkk'], [18, 7, 'kkkkkk'], [26, 7, 'k'], [23, 8, 'k'], [26, 8, 'k'], [23, 9, 'kkkk']],
       },
       {
+        // a narrow board gripped at its top-left corner by the pad; a steel clip on top,
+        // three list lines, each with a box that a check fills in
         g: 'it',
-        map: { m: '#9AA0A8', P: '#F3F0E9', l: '#BFBFBA' },
+        map: { m: '#9AA0A8', P: '#F3F0E9', l: '#A9A9A3', x: '#D6D3CC', o: 'A' },
         segs: [
-          [28, 15, 'mm'],
-          [26, 16, 'oooooo'],
-          [26, 17, 'oPPPPo'], [26, 18, 'oPPllo'], [26, 19, 'oPPPPo'], [26, 20, 'oPPllo'],
-          [26, 21, 'oPPPPo'], [26, 22, 'oPPllo'], [26, 23, 'oPPPPo'], [26, 24, 'oooooo'],
+          [28, 16, 'mmm'],
+          [27, 17, 'ooooo'],
+          [27, 18, 'oPPPo'], [27, 19, 'oxllo'], [27, 20, 'oPPPo'], [27, 21, 'oxllo'],
+          [27, 22, 'oPPPo'], [27, 23, 'oxllo'], [27, 24, 'ooooo'],
         ],
       },
-      { g: 'c1', map: { v: '#3B9C5F' }, segs: [[27, 18, 'vv']] },
-      { g: 'c2', map: { v: '#3B9C5F' }, segs: [[27, 20, 'vv']] },
-      { g: 'c3', map: { v: '#3B9C5F' }, segs: [[27, 22, 'vv']] },
+      { g: 'c1', map: { v: '#2E8B57' }, segs: [[28, 19, 'v']] },
+      { g: 'c2', map: { v: '#2E8B57' }, segs: [[28, 21, 'v']] },
+      { g: 'c3', map: { v: '#2E8B57' }, segs: [[28, 23, 'v']] },
     ],
-    anim: `.p-dogs .d-planner.run .c1{animation:dogs-tick 1.5s steps(1) infinite}
-.p-dogs .d-planner.run .c2{animation:dogs-tick 1.5s steps(1) infinite -.5s}
-.p-dogs .d-planner.run .c3{animation:dogs-tick 1.5s steps(1) infinite -1s}`,
+    // one pass a second: blank, then each box checks in turn
+    anim: `.p-dogs .d-tester.run .c1{animation:dogs-t1 1s steps(1) infinite}
+.p-dogs .d-tester.run .c2{animation:dogs-t2 1s steps(1) infinite}
+.p-dogs .d-tester.run .c3{animation:dogs-t3 1s steps(1) infinite}`,
   },
-  // flat cap + blueprint tube; the tube sways
-  architect: {
+  // fixer: flat cap + wrench; the wrench works up and down
+  fixer: {
     hold: true,
     hat: true,
     layers: [
       {
         // ear tips poke out above the cap; the brim juts past the brow
         at: 'head',
-        map: { h: '#6E6253', H: '#A3957F', d: '#4E4539' },
+        map: { H: 'A', h: 'A', d: '#4E4539' },
         segs: [[18, 3, r('H', 7)], [17, 4, r('h', 9)], [17, 5, r('h', 9)], [26, 5, 'ddd']],
       },
       {
+        // an open-ended wrench held upright in the paw, jaw up
         g: 'it',
-        map: { b: '#3E78CF', B: '#BBD2F2' },
-        segs: [
-          [28, 16, 'BBB'],
-          ...[17, 18, 20, 21, 23, 24].map(y => [28, y, 'bbb'] as Seg),
-          [28, 19, 'BBB'], [28, 22, 'BBB'], [28, 25, 'BBB'],
-        ],
+        map: { s: '#8C96A3', S: '#5F6874' },
+        segs: [[28, 15, 's..s'], [28, 16, 's..s'], [28, 17, 'ssss'], [29, 18, 'sS'], [29, 19, 'sS'], [29, 20, 'sS'], [29, 21, 'sS'], [29, 22, 'sS'], [29, 23, 'sS']],
       },
     ],
-    anim: '.p-dogs .d-architect.run .it{transform-origin:50% 100%;animation:dogs-sway 1.6s ease-in-out infinite}',
+    anim: '.p-dogs .d-fixer.run .it{animation:dogs-st .5s steps(1) infinite}',
   },
-  // top hat in front of the ears + bow tie + baton; the baton conducts
-  orchestrator: {
+  // conductor: top hat in front of the ears + bow tie + baton; the baton beats between two poses
+  conductor: {
     hold: true,
     hat: true,
     layers: [
       {
         at: 'head',
-        map: { r: '#8E2332' },
+        map: { r: 'A' },
         segs: [[22, -2, 'wwwww'], [22, -1, 'kKkkk'], [22, 0, 'kKkkk'], [22, 1, 'kKkkk'], [22, 2, 'rrrrr'], [21, 3, 'wkkkkkw']],
       },
       { at: 'neck', map: { r: '#C04257', R: '#8E2332' }, segs: [[21, 14, 'rr.rr'], [21, 15, 'rrRrr'], [21, 16, 'rr.rr']] },
-      { g: 'it', segs: [[28, 16, 'kW'], [29, 15, 'kW'], [30, 14, 'kW'], [31, 13, 'y']] },
+      // the baton swaps between raised and level; the grip pixel stays in the paw
+      { segs: [[28, 16, 'k'], [28, 17, 'k']] },
+      { g: 'pa', segs: [[29, 15, 'kW'], [30, 14, 'kW'], [31, 13, 'y']] },
+      { g: 'pb', segs: [[29, 16, 'WWy'], [29, 17, 'kkk']] },
     ],
-    anim: '.p-dogs .d-orchestrator.run .it{transform-origin:0% 100%;animation:dogs-conduct .5s ease-in-out infinite}',
+    anim: '',
   },
-  // bandana + eye patch + cutlass; the cutlass lunges
-  explore: {
+  // scout: bandana + eye patch + spyglass
+  scout: {
     hold: true,
     hat: true,
     layers: [
       {
         // tied across the brow under the ears, the knot trailing behind
         at: 'head',
-        map: { r: '#C7563D', W: '#F6F2EA' },
+        map: { r: 'A', W: '#F6F2EA' },
         segs: [[14, 4, r('r', 11)], [13, 5, 'rrrWrrrrrWrrr'], [12, 4, 'rr'], [11, 5, 'rr'], [11, 6, 'r']],
       },
       { at: 'eye', map: { k: 'ink' }, segs: [[19, 6, 'kkkk'], [23, 6, 'kkk'], [23, 7, 'kkk'], [23, 8, 'kkk']] },
-      { g: 'it', map: { s: '#D3D6DB' }, segs: [[28, 17, 'y'], [28, 18, 'y'], [28, 19, 'y'], [29, 16, 'ks'], [29, 15, 'ks'], [30, 14, 'ks'], [31, 13, 's']] },
+      // a brass spyglass held level, the wide end out front; the lens glints
+      { map: { B: '#BBD2F2' }, segs: [[30, 14, 'kk'], [29, 15, 'kyy'], [28, 16, 'yyyB'], [28, 17, 'oooB'], [29, 18, 'koo'], [30, 19, 'kk']] },
+      { g: 'gl', map: { G: '#FFFFFF' }, segs: [[31, 16, 'G']] },
     ],
-    anim: '.p-dogs .d-explore.run .it{transform-origin:0% 100%;animation:dogs-lunge .5s ease-in-out infinite}',
+    anim: '.p-dogs .d-scout.run .gl{animation:dogs-blink 1s steps(1) infinite}',
   },
-  // no costume; the collar carries the colour
-  other: { layers: [], anim: '' },
+  // plain: no costume; the collar carries the colour
+  plain: { layers: [], anim: '' },
 }
 
 // --- render -------------------------------------------------------------------------------
 type Cell = { c: string; g: string; key: string; tone: Tones }
 
-const svgFor = (name: string, breed: Breed, accent: string): string => {
+// The wag: the same tail with its upper half one pixel further back. The lower rows, where
+// it meets the rump, match the first pose, so the join never moves.
+const wagOf = (tail: Seg[]): Seg[] => {
+  const half = Math.ceil(tail.length / 2)
+  return tail.map(([x, y, px], i): Seg => [i < half ? x - 1 : x, y, px])
+}
+
+// Paints one pose into rect runs, keyed by animation group.
+const paint = (name: string, breed: Breed, accent: string, tail: Seg[]): Map<string, string[]> => {
   const costume = COSTUMES[name]
   const coat = breed.coat
   const patch = coat.patch ?? coat
@@ -572,11 +578,13 @@ const svgFor = (name: string, breed: Breed, accent: string): string => {
       })
   }
   const { legs } = breed
-  fill(breed.tail, 'tl')
+  // Far legs go under the body, so their tops hide behind it; the near legs go over it, so
+  // the near thigh flows out of the rump. Diagonal pairs share a walk phase.
+  fill(tail, 'tl')
+  const farCells = new Set<string>()
+  fill(legs.backFar, 'lb', farCells)
+  fill(legs.frontFar, 'la', farCells)
   fill(breed.body, 'bd')
-  // Far legs first so the near ones overlap them; diagonal pairs share a walk phase.
-  fill(legs.backFar, 'lb')
-  fill(legs.frontFar, 'la')
   fill(legs.backNear, 'la')
   if (!costume.hold) fill(legs.frontNear, 'lb')
   const cells = (list: Seg[][]) => {
@@ -585,7 +593,8 @@ const svgFor = (name: string, breed: Breed, accent: string): string => {
     return set
   }
   const near = cells(costume.hold ? [legs.backNear] : [legs.backNear, legs.frontNear])
-  const far = new Set([...cells([legs.backFar, legs.frontFar])].filter(k => !near.has(k)))
+  // Only the far-leg pixels the body and near legs left showing count as far.
+  const far = new Set([...farCells].filter(k => !near.has(k) && (grid[+k.split(',')[1]][+k.split(',')[0]]?.g ?? 'bd') !== 'bd'))
 
   // Outline: any filled pixel that touches empty space or the edge, and a near leg where it
   // passes in front of a far one. The nose stays dark: it is its own outline.
@@ -621,6 +630,7 @@ const svgFor = (name: string, breed: Breed, accent: string): string => {
         if (ch === '.' || ch === ' ' || !inside(gx, gy)) return
         let c = map[ch] ?? (ch === 'A' ? accent : ch === 'g' ? '#E3B23C' : PROP[ch])
         if (c === 'ink') c = coat.ink
+        if (c === 'A') c = accent
         if (c) grid[gy][gx] = { c, g: group, key: ch, tone: coat }
       })
   }
@@ -632,7 +642,7 @@ const svgFor = (name: string, breed: Breed, accent: string): string => {
   // everything but itself, except at the elbow where it grows out of the body.
   if (costume.hold) {
     const arm = new Set<string>()
-    fill(name === 'developer' ? breed.devArm : breed.arm, 'bd', arm)
+    fill(name === 'builder' ? breed.devArm : breed.arm, 'bd', arm)
     const joined = (x: number, y: number) => {
       const cell = grid[y][x]
       if (arm.has(`${x},${y}`)) return true
@@ -660,33 +670,42 @@ const svgFor = (name: string, breed: Breed, accent: string): string => {
       x = end
     }
   })
-  const g = (k: string) => (groups.has(k) ? `<g class="${k}">${groups.get(k)?.join('')}</g>` : '')
-  const ground = new Set(costume.layers.filter(l => l.ground).map(l => l.g ?? 'bd'))
-  const props = (onGround: boolean) =>
-    [...groups.keys()].filter(k => !['bd', 'la', 'lb', 'tl'].includes(k) && ground.has(k) === onGround).map(g).join('')
-  return `${g('tl')}<g class="bd">${g('bd')}${props(false)}</g>${props(true)}${g('la')}${g('lb')}`
+  return groups
 }
 
-// Same walk and prop motion as the cats, with two dog-only rules: the body group sits inside
-// the outer .bd, so it must not bob a second time, and a dog's tail wags from its base.
+// The tail rides the body's bob and wags by swapping between two pixel poses (`tl`, `tw`), so
+// it never leaves the grid or pulls away from the rump. Body rects sit straight in `bd`: a
+// nested `bd` would bob twice and leave the props behind. Ground props stay out of the bob.
+const svgFor = (name: string, breed: Breed, accent: string): string => {
+  const costume = COSTUMES[name]
+  const groups = paint(name, breed, accent, breed.tail)
+  const wag = paint(name, breed, accent, wagOf(breed.tail)).get('tl') ?? []
+  const g = (k: string, rects = groups.get(k)) => (rects ? `<g class="${k}">${rects.join('')}</g>` : '')
+  const ground = new Set(costume.layers.filter(l => l.ground).map(l => l.g ?? 'bd'))
+  const props = (onGround: boolean) =>
+    [...groups.keys()].filter(k => !['bd', 'la', 'lb', 'tl'].includes(k) && ground.has(k) === onGround).map(k => g(k)).join('')
+  return `<g class="bd">${g('tl')}${g('tw', wag)}${(groups.get('bd') ?? []).join('')}${props(false)}</g>${props(true)}${g('la')}${g('lb')}`
+}
+
+// Same walk and prop motion as the cats. A dog wags faster than a cat swishes.
 const DOG_CSS = `<style>
 .p-dogs .run g{transform-box:fill-box}
 .p-dogs .run .la{animation:dogs-st .5s steps(1) infinite}
 .p-dogs .run .lb{animation:dogs-st .5s steps(1) infinite -.25s}
 .p-dogs .run .bd{animation:dogs-bob .5s steps(1) infinite -.125s}
-.p-dogs .run .tl{transform-origin:85% 100%;animation:dogs-swish 1.2s ease-in-out infinite}
-.p-dogs .dog.run .bd .bd{animation:none}
-.p-dogs .dog.run .tl{transform-origin:50% 100%;animation:dogs-wag .4s ease-in-out infinite}
+.p-dogs .tw,.p-dogs .pb{opacity:0}
+.p-dogs .run .pa{animation:dogs-off .5s steps(1) infinite}
+.p-dogs .run .pb{animation:dogs-on .5s steps(1) infinite}
+.p-dogs .run .tl{animation:dogs-off .5s steps(1) infinite}
+.p-dogs .run .tw{animation:dogs-on .5s steps(1) infinite}
 @keyframes dogs-st{50%{transform:translateY(-1px)}}
 @keyframes dogs-bob{50%{transform:translateY(1px)}}
-@keyframes dogs-swish{50%{transform:rotate(-12deg)}}
-@keyframes dogs-wag{50%{transform:rotate(-6deg)}}
+@keyframes dogs-off{50%{opacity:0}}
+@keyframes dogs-on{50%{opacity:1}}
 @keyframes dogs-blink{50%{opacity:.25}}
-@keyframes dogs-dab{50%{transform:translate(1px,-1px)}}
-@keyframes dogs-tick{0%{opacity:0}33%{opacity:1}}
-@keyframes dogs-sway{50%{transform:rotate(6deg)}}
-@keyframes dogs-conduct{50%{transform:rotate(-24deg)}}
-@keyframes dogs-lunge{50%{transform:translateX(1px) rotate(-8deg)}}
+@keyframes dogs-t1{0%{opacity:0}25%{opacity:1}}
+@keyframes dogs-t2{0%{opacity:0}50%{opacity:1}}
+@keyframes dogs-t3{0%{opacity:0}75%{opacity:1}}
 ${Object.values(COSTUMES).map(c => c.anim).filter(Boolean).join('\n')}
 @media (prefers-reduced-motion: reduce){.p-dogs .run,.p-dogs .run g{animation:none!important}}
 </style>`
@@ -709,7 +728,7 @@ export const COSTUME_NAMES: readonly string[] = Object.keys(COSTUMES)
 // `mirror` flips the dog inside its own box (x .. x + DOG_W * scale) so it faces left.
 // The dogs dress by role; the tier only reaches them through the accent colour.
 const draw = (x: number, y: number, who: { role: Role; tier: Tier }, o: DrawOptions): string => {
-  const name = COSTUMES[who.role] ? who.role : 'other'
+  const name = Object.prototype.hasOwnProperty.call(COSTUMES, who.role) ? who.role : 'plain'
   const breed = BREED_TABLE[o.variant] ? o.variant : BREEDS[0]
   const scale = o.scale ?? 1
   const place = o.mirror ? `translate(${x + DOG_W * scale},${y}) scale(${-scale},${scale})` : `translate(${x},${y}) scale(${scale})`

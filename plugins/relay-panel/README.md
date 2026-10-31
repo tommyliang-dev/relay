@@ -7,15 +7,17 @@ A Claude Code mod: a progress bar above the prompt and a live panel of subagents
 
 Only `relay-*` workers count as tiered. Every other subagent shows as `other`.
 
+Each sprite wears a costume for its role. The main session is the **conductor**. The orchestrator gives every planned task a role, and a worker wears the role of the task it runs: **builder** (features, changes), **fixer** (debugging, root cause), **tester** (builds, tests, checks) or **scout** (searching, reading code). A worker with no matching task is a builder. The built-in Explore agent is a scout; any other subagent is **plain**. The tier colour tints the costume's main piece (hat, headphones, clipboard, bandana) and the collar.
+
 ## Sprite packs
 
-- **cats**: British Shorthairs in profile, one costume per role: the orchestrator in a top hat with a baton, the planner in spectacles with a clipboard, the architect in a flat cap with a blueprint tube, the developer in headphones with a laptop, the designer in a beret with a brush, and explore as a pirate. The collar carries the tier colour. Each task gets its own coat (blue, white, cream, red, chocolate, lilac, cinnamon or fawn).
-- **crabs** (the default everyday pack): the original crabs, one costume per tier: astronaut (expert, formerly fable), detective (heavy), hard hat (careful), chef (medium), racer (light), and pirate for explore.
-- **dogs**: six breeds (corgi, husky, samoyed, bichon frise, maltese, shiba), one costume per role, breed per task.
-- **turkeys** (holiday, Nov 15-30): six heritage breeds (bronze, narragansett, bourbon red, white holland, royal palm, slate) with fanned tails; pilgrim hat, recipe card, pie palette.
-- **christmas** (holiday, December): characters by role: Santa (orchestrator), Mrs Claus (planner), elves (architect, developer, designer), the flying sled (explore) and reindeer (other), with Rudolph among the coats.
+- **cats**: British Shorthairs in profile, one costume per role: the conductor in a top hat with a baton, the builder in headphones with a laptop, the fixer in a flat cap with a wrench, the tester in spectacles with a clipboard, and the scout as a pirate with a spyglass. Each task gets its own coat (blue, white, cream, blue and white, cream van, cream and white, lilac point or fawn).
+- **clawd** (the default everyday pack): the original crab, one costume per tier instead of per role: astronaut (expert, formerly fable), detective (heavy), hard hat (careful), chef (medium), racer (light), and pirate for a scout.
+- **dogs**: six breeds (corgi, husky, samoyed, bichon frise, maltese, shiba), breed per task, in the same costumes as the cats.
+- **turkeys** (holiday, Nov 15-30): six heritage breeds (bronze, narragansett, bourbon red, white holland, royal palm, slate) with fanned tails; the conductor in a pilgrim hat with a drumstick baton, the fixer with a wrench, the tester with a recipe card and the scout with a spyglass.
+- **christmas** (holiday, December): one character per role: Santa (conductor), a gingerbread man with a peppermint mallet (builder), a nutcracker with a magnifying glass (fixer), Mrs Claus with a clipboard (tester), an elf with a lantern (scout) and reindeer (plain), with Rudolph among the coats.
 
-Two settings decide what is drawn. The **everyday pack** shows all year: crabs by default, any pack, or `shuffle` (a random non-holiday pack each session, never the same one twice running). With **seasons** on (the default) holiday packs replace it in season, in local time: turkeys Nov 15-30, Christmas in December (a holiday pack that is not installed leaves the everyday pack showing). The pack is checked at session start and when a new `/relay` plan starts.
+Two settings decide what is drawn. The **everyday pack** shows all year: clawd by default, any pack, or `shuffle` (a random non-holiday pack each session, never the same one twice running). With **seasons** on (the default) holiday packs replace it in season, in local time: turkeys Nov 15-30, Christmas in December (a holiday pack that is not installed leaves the everyday pack showing). The pack is checked at session start and when a new `/relay` plan starts.
 
 `/relay-pack` shows the settings (`everyday: cats · seasons on · showing: cats · next: turkeys Nov 15`) and lists the packs. `/relay-pack <id>` sets the everyday pack; picked during a season it shows at once and that season is skipped until it ends. `/relay-pack shuffle [ids]` shuffles (all non-holiday packs, or the ids given). `/relay-pack seasons on|off` turns the holiday packs on or off; `/relay-pack auto` is the same as `seasons on`. `/relay-pack preview` opens a gallery where holiday cards show their dates, the everyday pack reads "Everyday", the one drawn now "Showing", and "Use" sets the everyday pack. The `relay-pack` skill does the same when you ask ("use dogs", "shuffle my sprites", "turn off holidays"). Choices stay across sessions and redraw at once.
 
@@ -39,11 +41,13 @@ Set them in `/config`, or in `~/.claude/settings.json`:
 
 `autoOpen`: `relay` (default) or `any`. With `relay` the panel opens by itself when a `relay-*` worker starts or a plan is reported. With `any` it also opens, once per session, when any other subagent starts. `/relay-agents` toggles it either way.
 
-`pack`: the everyday pack: `crabs` (default), `cats`, `dogs` or `shuffle` (a random non-holiday pack each session). A 0.2.x value `auto` reads as the default. `/relay-pack <id>` and `/relay-pack shuffle` override it.
+`pack`: the everyday pack: `clawd` (default), `cats`, `dogs` or `shuffle` (a random non-holiday pack each session). A 0.2.x value `auto` reads as the default. `/relay-pack <id>` and `/relay-pack shuffle` override it.
 
 `seasons`: `on` (default: turkeys Nov 15-30 and Christmas in December replace the everyday pack) or `off` (the everyday pack all year). `/relay-pack seasons on|off` overrides it.
 
 Upgrading from 0.2.x: a pack pinned with `/relay-pack` becomes the everyday pack with seasons on.
+
+Upgrading from 0.3.x: the `crabs` pack is now `clawd`; a stored or configured `crabs` falls back to the default, which is `clawd`. Roles come from the plan (`role` on each task in `mcp__relay-panel__progress`) instead of the task's wording, and are conductor, builder, fixer, tester, scout and plain.
 
 ## Install
 

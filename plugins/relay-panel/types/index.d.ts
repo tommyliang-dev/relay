@@ -3,6 +3,7 @@ export type Phase = 'plan' | 'design' | 'delegate' | 'review' | 'close'
 export type PlannedTask = {
   title: string
   tier: string
+  role: string
   after: number[]
 }
 

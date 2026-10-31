@@ -40,7 +40,7 @@ Behaviour otherwise matches the fork: languages (en, ru, he with RTL), `autoOpen
 Each pack is one module under `plugins/relay-panel/hooks/packs/<id>.ts` exporting a `Pack`:
 
 ```ts
-export type Role = 'orchestrator' | 'planner' | 'architect' | 'developer' | 'designer' | 'explore' | 'other'
+export type Role = 'conductor' | 'builder' | 'fixer' | 'tester' | 'scout' | 'plain'
 export type Tier = 'expert' | 'heavy' | 'careful' | 'medium' | 'light' | 'other' // expert: formerly fable
 
 export type DrawOptions = {
@@ -57,26 +57,28 @@ export type Pack = {
   name: string                  // 'British Shorthair cats' (sentence case)
   w: number; h: number          // drawing grid in px at scale 1
   css: string                   // one <style> block; selectors scoped under .p-<id>
-  roles: readonly Role[]        // costumes it draws; others fall back to 'other'
+  roles: readonly Role[]        // costumes it draws; others fall back to 'plain'
   variants: readonly string[]   // coats / breeds / colours
   variantOf: (taskKey: string) => string // stable hash pick
   draw: (x: number, y: number, who: { role: Role; tier: Tier }, o: DrawOptions) => string // SVG <g>
 }
 ```
 
-`who` carries both role and tier because the crabs dress by tier (astronaut expert, formerly fable; detective heavy, hard-hat careful, chef medium, racer light, pirate explore) while the cats dress by role. A pack uses whichever it wants.
+`who` carries both role and tier because Clawd dresses by tier (astronaut expert, formerly fable; detective heavy, hard-hat careful, chef medium, racer light, pirate scout) while the other packs dress by role. A pack uses whichever it wants.
+
+### Roles
+
+The orchestrator sets a `role` on every planned task in `mcp__relay-panel__progress`: `builder` (features, changes), `fixer` (debugging, root cause), `tester` (builds, tests, checks) or `scout` (searching, reading code). A relay worker wears the role of the planned task its description matches; with no match, or no role, it is a builder. The main session is the `conductor`, the built-in Explore agent a `scout`, any other subagent `plain`. Nothing is inferred from task text. The tier colour tints the costume's main piece as well as the collar.
 
 The registry `hooks/packs/index.ts` lists the packs. The panel draws through `activePack().draw(...)`, never a pack directly. CSS from every pack is scoped under its own `.p-<id>` class so two packs never collide in a gallery.
 
-### Packs in v1
+### Packs
 
-1. **cats**: `cats.ts` from the fork, adapted to the interface. 7 roles, 8 coats.
-2. **crabs**: stock `crabBody` / `COSTUMES` / `CRAB_CSS`, wrapped. Variants: one per tint of the clay body (variant picker kept stable; v1 may ship a single variant if extra tints look wrong).
-
-### Later packs (slots left open)
-
-3. **dogs**: corgi, husky, samoyed, bichon frise, maltese, shiba. Being drawn in another session at `shorthair-sprites/dogs.ts`. Breed is the variant; costumes by role. Imported only after you approve the draft.
-4. **spiders**: if the old sprites turn up. Same interface.
+1. **cats**: British Shorthairs, 6 roles, 8 coats.
+2. **clawd**: the stock savvy-progress crab, wrapped; dressed by tier, one clay variant. The default everyday pack.
+3. **dogs**: corgi, husky, samoyed, bichon frise, maltese, shiba. Breed is the variant; costumes by role.
+4. **turkeys** (holiday): six heritage breeds; costumes by role.
+5. **christmas** (holiday): one character per role: Santa, gingerbread, nutcracker, Mrs Claus, an elf with a lantern, reindeer.
 
 Adding a pack = one file + one line in the registry + its tests. No panel change.
 
@@ -84,7 +86,7 @@ Adding a pack = one file + one line in the registry + its tests. No panel change
 
 Two settings and a shuffle option (since relay-panel 0.3.0; 0.2.x had one `auto` or pinned mode):
 
-- **Everyday pack**: a pack id, or `shuffle`. The `$.store` key `everyday`, then the plugin option `pack` ("Everyday pack": `crabs` default, `cats`, `dogs`, `shuffle`; a legacy `auto` reads as the default). Any registered id may be stored, holiday packs included (`/relay-pack turkeys` draws turkeys whenever no season shows).
+- **Everyday pack**: a pack id, or `shuffle`. The `$.store` key `everyday`, then the plugin option `pack` ("Everyday pack": `clawd` default, `cats`, `dogs`, `shuffle`; a legacy `auto` reads as the default). Any registered id may be stored, holiday packs included (`/relay-pack turkeys` draws turkeys whenever no season shows).
 - **Seasons**: on or off. The store key `seasons` (boolean), then the option `seasons` (`on` default, `off`).
 - **Shuffle list**: the store key `shuffleList` (empty = every non-holiday pack).
 - **Skipped season**: the store key `skipSeason`, `'<seasonId>:<year the season starts>'` (`christmas:2026`), or absent. A key from a season that is over never matches; it is cleared at `session.start`.
@@ -99,7 +101,7 @@ The store wins over the options. All keys persist across sessions, per plugin, w
 | Nov 15-30 | `turkeys` |
 | Dec 1-31 | `christmas` |
 
-`OFF_SEASON` (`crabs`, also `DEFAULT_PACK`) is the fallback.
+`OFF_SEASON` (`clawd`, also `DEFAULT_PACK`) is the fallback. A stored id that is no longer registered (such as the former `crabs`) falls back to it.
 
 **Resolution** (`resolvePack` in `seasons.ts`, pure, unit-tested):
 
@@ -124,7 +126,7 @@ Why not a settings key: writing `settings.json` from a mod is heavier, and the o
   - `list`: the settings line first, then ids, names, variant count, `(active)` on the one showing. The line: `everyday: cats · seasons on · showing: cats · next: turkeys Nov 15`; a shuffle reads `everyday: shuffle (cats, dogs) · …`; a skip adds `· christmas skipped until Dec 31`; seasons off reads `· seasons off` with no `next`.
   - `set` with `id`: a pack id becomes the everyday pack (`ok: everyday pack is Pixel dogs`; in season `ok: Pixel dogs now; Christmas skipped until Dec 31`); `shuffle` shuffles every non-holiday pack; `auto` turns seasons on. An unknown id is refused, naming the valid ones.
   - `shuffle` with optional `ids`: everyday `shuffle` over those ids, with a fresh pick now and the same in-season skip. Holiday or unknown ids are refused, naming the valid ones.
-  - `seasons` with `on`: holiday packs on or off (`ok: seasons off; showing Pixel crabs`).
+  - `seasons` with `on`: holiday packs on or off (`ok: seasons off; showing Clawd`).
   - `preview`: opens a `relay-packs` pane: one card per pack, every role in a row, walking. Labels: holiday cards "Holiday · Nov 15-30" / "Holiday · December", the everyday pack "Everyday", the one drawn now "Showing" (green). "Use" (on every card but the fixed everyday pack) sets the everyday pack.
 - **Slash command** `/relay-pack` (no args: list; `<id>`; `shuffle [ids…]`; `seasons on|off`; `auto` = seasons on; `preview`). Works without the model.
 - **Skill** `relay-pack` in the `relay-panel` plugin maps plain requests ("use dogs", "shuffle my sprites", "turn off holidays") to the tool. Model-invocable.
@@ -149,5 +151,5 @@ Both panels would draw a band and auto-open on plan reports. After installing re
 ## Open questions
 
 1. Keep the five tier names (light … expert) as is? Settled: the top tier is `expert`, formerly `fable`; the panel still reads `fable` and `relay-fable` as expert.
-2. Crab variants: one clay colour, or a few tints? Default: one, extra tints only if they look good.
+2. Clawd variants: one clay colour, or a few tints? Settled: one.
 3. Should `/relay` stay model-invocable (auto) or be manual like `/savvy-flow`? Default: auto, since that's how you use it now.

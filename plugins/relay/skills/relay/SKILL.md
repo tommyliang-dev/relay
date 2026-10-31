@@ -22,7 +22,7 @@ If the arguments are empty, the task is whatever the user just asked in this con
 ## Progress bar
 
 If `mcp__relay-panel__progress` appears among your tools, including as a deferred tool, it is available: load a deferred tool first with ToolSearch (`select:mcp__relay-panel__progress`). Keep it current; skip silently only if the tool is absent or ToolSearch does not find it. Call it:
-- after presenting the plan: `title` (a few words), `total` (number of worker tasks), `tasks` (`[{ title, tier, after }]` in plan order; `tier` without the `relay-` prefix (`light`, `medium`, `careful`, `heavy`, `expert`), `after` the numbers of the tasks it waits for, matching the real dependency graph), `phase: "delegate"` (or `"design"` while in section 2);
+- after presenting the plan: `title` (a few words), `total` (number of worker tasks), `tasks` (`[{ title, tier, role, after }]` in plan order; `tier` without the `relay-` prefix (`light`, `medium`, `careful`, `heavy`, `expert`); `role` the kind of job, drawn as the worker's costume: `builder` (features, changes), `fixer` (debugging, root cause), `tester` (builds, tests, checks) or `scout` (searching, reading code); `after` the numbers of the tasks it waits for, matching the real dependency graph), `phase: "delegate"` (or `"design"` while in section 2);
 - each time a task is accepted: `done` (accepted so far);
 - during the final gate: `phase: "review"`;
 - if re-planning changes the tasks: the new `tasks` and `total`;
@@ -35,7 +35,7 @@ When delegating, pass the task's `title` verbatim as the Agent tool's `descripti
 1. Read what you need to understand the request: relevant files, CLAUDE.md, recent git history. Use an Explore subagent only for wide searches.
    - If the working directory has no project (empty, or no source, manifests or CLAUDE.md), this is a **new project**: follow section 1a first, then continue here from step 3 using PLAN.md as the task list.
 2. Decide whether the task **touches design** (visible UI, layout, visual hierarchy, user-facing copy, interaction flow, colors, typography, spacing). If yes, go to section 2 before any implementation.
-3. Break the work into **tasks**. For each: goal, the files it will touch, dependencies, tier (section 3).
+3. Break the work into **tasks**. For each: goal, the files it will touch, dependencies, tier (section 3), role (builder, fixer, tester or scout).
 4. Build the dependency graph. Two tasks are independent only if their edit sets are disjoint **and** neither needs the other's output. If you cannot show the sets are disjoint, chain the tasks.
 5. Merge tasks too small to justify a worker.
 6. Show the plan compactly (numbered tasks, tier, order) and proceed. Ask first only if the request has readings that lead to materially different work.

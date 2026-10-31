@@ -9,7 +9,7 @@ export const SEASONS: readonly Season[] = [
   { id: 'christmas', from: [12, 1], to: [12, 31] },
 ]
 
-export const OFF_SEASON = 'crabs'
+export const OFF_SEASON = 'clawd'
 
 const key = (m: number, d: number) => m * 100 + d
 

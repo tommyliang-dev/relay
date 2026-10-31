@@ -22,6 +22,7 @@ type Coat = Tones & { m: string; n: string; e: string; ink: string; patch?: Tone
 const BLUE: Tones = { o: '#46525F', s: '#6F8091', b: '#8C9DAD', h: '#A8B7C5' }
 const WHITE: Tones = { o: '#9A958D', s: '#D8D4CC', b: '#F3F1EC', h: '#FFFFFF' }
 const LILAC: Tones = { o: '#65545D', s: '#9C8893', b: '#B9A6AF', h: '#CDBCC4' }
+const CREAM: Tones = { o: '#9A7B52', s: '#D6B47F', b: '#EBD09F', h: '#F5E2BF' }
 
 const COATS: Record<string, Coat> = {
   blue: { o: '#46525F', s: '#6F8091', b: '#8C9DAD', h: '#A8B7C5', m: '#B8C4CF', n: '#5E6E7E', e: '#E58A2B', ink: '#2B323A' },
@@ -30,8 +31,9 @@ const COATS: Record<string, Coat> = {
   // white with a blue cap, saddle and tail
   'blue-white': { ...WHITE, m: '#FFFFFF', n: '#E7A0A8', e: '#E58A2B', ink: '#3A4048', patch: BLUE, pattern: 'bicolour' },
   // white with a cream cap and tail
-  'cream-van': { ...WHITE, m: '#FFFFFF', n: '#E3A098', e: '#D9822B', ink: '#4A3A2A', patch: { o: '#9A7B52', s: '#D6B47F', b: '#EBD09F', h: '#F5E2BF' }, pattern: 'van' },
-  lilac: { o: '#65545D', s: '#9C8893', b: '#B9A6AF', h: '#CDBCC4', m: '#D6C8CE', n: '#C98E9F', e: '#E58A2B', ink: '#3A2F35' },
+  'cream-van': { ...WHITE, m: '#FFFFFF', n: '#E3A098', e: '#D9822B', ink: '#4A3A2A', patch: CREAM, pattern: 'van' },
+  // white with a cream cap, saddle and tail
+  'cream-white': { ...WHITE, m: '#FFFFFF', n: '#E3A098', e: '#D9822B', ink: '#4A3A2A', patch: CREAM, pattern: 'bicolour' },
   // pale cream body with lilac ears, mask, legs and tail; pointed cats have blue eyes
   'lilac-point': { o: '#A59A8C', s: '#DED5C9', b: '#F4EEE6', h: '#FFFFFF', m: '#FFFFFF', n: '#C98E9F', e: '#5A8FE0', ink: '#3A2F35', patch: LILAC, pattern: 'point' },
   fawn: { o: '#7B6556', s: '#B39A87', b: '#CDB7A4', h: '#DCC9B8', m: '#E4D5C8', n: '#D4A2A0', e: '#D9822B', ink: '#3F332B' },
@@ -82,6 +84,10 @@ const TAIL: Seg[] = [
   [4, 12, 'bbbb'],
   [5, 13, 'bb'],
 ]
+
+// The swish: the same curled tail with its upper half one pixel further back. Rows 9-13,
+// where it meets the rump, match the first pose, so the join never moves.
+const TAIL_SWISH: Seg[] = [...TAIL.slice(0, 5).map(([x, y, px]): Seg => [x - 1, y, px]), ...TAIL.slice(5)]
 
 const HEAD: Seg[] = [
   // ears: medium, broad at the base, round tips, set far apart; the far one in shadow
@@ -158,15 +164,17 @@ const PROP: Record<string, string> = {
   o: '#A8743E', // wood
 }
 
+// The tier colour ('A' in a map value) tints each costume's main piece, as well as the collar.
 const COSTUMES: Record<string, Costume> = {
-  // headphones + laptop; the screen flickers
-  developer: {
+  // builder: headphones + laptop; the screen flickers
+  builder: {
     hold: true,
     // paw reaching down onto the keyboard
     arm: [[22, 20, 'bbb'], [22, 21, 'bbbb'], [23, 22, 'bbbb'], [24, 23, 'bbbm']],
     layers: [
       {
         // band arcs over the crown between the ears, down to a round cup on the cheek
+        map: { K: 'A' },
         segs: [
           [22, 1, 'ww'], [22, 2, 'kk'], [22, 3, 'kk'], [21, 4, 'kk'], [21, 5, 'kk'], [20, 6, 'kk'],
           [19, 7, 'kkk'], [18, 8, 'kKKk'], [18, 9, 'kKKk'], [18, 10, 'kKKk'], [19, 11, 'kkk'],
@@ -183,27 +191,10 @@ const COSTUMES: Record<string, Costume> = {
       },
       { g: 'cur', map: { b: '#EAF2FF' }, segs: [[30, 18, 'b'], [29, 21, 'b']] },
     ],
-    anim: '.p-cats .c-developer.run .cur{animation:cats-blink 1s steps(1) infinite}',
+    anim: '.p-cats .c-builder.run .cur{animation:cats-blink 1s steps(1) infinite}',
   },
-  // beret + brush + palette; the brush dabs
-  designer: {
-    hold: true,
-    layers: [
-      {
-        // a flat disc over the near ear, its band on the skull; the far ear stays up
-        map: { r: '#C04257', R: '#8E2332' },
-        segs: [[20, 1, 'r'], [17, 2, r('r', 7)], [15, 3, r('r', 11)], [15, 4, 'R' + r('r', 10)], [16, 5, r('R', 8)]],
-      },
-      {
-        map: { p: '#C9955A', r: '#D0453F', b: '#2F6FD6', e: '#3B9C5F' },
-        segs: [[25, 23, 'ppppp'], [24, 24, 'prpbyp'], [24, 25, 'ppeppp']],
-      },
-      { g: 'it', map: { r: '#D0453F' }, segs: [[28, 17, 'o'], [29, 16, 'o'], [30, 15, 'rr'], [30, 14, 'rr']] },
-    ],
-    anim: '.p-cats .c-designer.run .it{animation:cats-dab .5s steps(1) infinite}',
-  },
-  // spectacles + clipboard; the checks tick in one by one
-  planner: {
+  // tester: spectacles + clipboard; the boxes check in one by one
+  tester: {
     hold: true,
     layers: [
       {
@@ -212,79 +203,85 @@ const COSTUMES: Record<string, Costume> = {
         segs: [[24, 7, 'kkkkk'], [19, 8, 'kkkkk'], [28, 8, 'k'], [24, 9, 'k'], [28, 9, 'k'], [24, 10, 'k'], [28, 10, 'k'], [24, 11, 'kkkkk']],
       },
       {
+        // a narrow board gripped at its left edge by the paw; a steel clip on top, three
+        // list lines, each with a box that a check fills in
         g: 'it',
-        map: { m: '#9AA0A8', P: '#F3F0E9', l: '#BFBFBA' },
+        map: { m: '#9AA0A8', P: '#F3F0E9', l: '#A9A9A3', x: '#D6D3CC', o: 'A' },
         segs: [
-          [28, 15, 'mm'],
-          [26, 16, 'oooooo'],
-          [26, 17, 'oPPPPo'], [26, 18, 'oPPllo'], [26, 19, 'oPPPPo'], [26, 20, 'oPPllo'],
-          [26, 21, 'oPPPPo'], [26, 22, 'oPPllo'], [26, 23, 'oPPPPo'], [26, 24, 'oooooo'],
+          [28, 15, 'mmm'],
+          [27, 16, 'ooooo'],
+          [27, 17, 'oPPPo'], [27, 18, 'oxllo'], [27, 19, 'oPPPo'], [27, 20, 'oxllo'],
+          [27, 21, 'oPPPo'], [27, 22, 'oxllo'], [27, 23, 'oPPPo'], [27, 24, 'ooooo'],
         ],
       },
-      { g: 'c1', map: { v: '#3B9C5F' }, segs: [[27, 18, 'vv']] },
-      { g: 'c2', map: { v: '#3B9C5F' }, segs: [[27, 20, 'vv']] },
-      { g: 'c3', map: { v: '#3B9C5F' }, segs: [[27, 22, 'vv']] },
+      { g: 'c1', map: { v: '#2E8B57' }, segs: [[28, 18, 'v']] },
+      { g: 'c2', map: { v: '#2E8B57' }, segs: [[28, 20, 'v']] },
+      { g: 'c3', map: { v: '#2E8B57' }, segs: [[28, 22, 'v']] },
     ],
-    anim: `.p-cats .c-planner.run .c1{animation:cats-tick 1.5s steps(1) infinite}
-.p-cats .c-planner.run .c2{animation:cats-tick 1.5s steps(1) infinite -.5s}
-.p-cats .c-planner.run .c3{animation:cats-tick 1.5s steps(1) infinite -1s}`,
+    // one pass a second: blank, then each box checks in turn
+    anim: `.p-cats .c-tester.run .c1{animation:cats-t1 1s steps(1) infinite}
+.p-cats .c-tester.run .c2{animation:cats-t2 1s steps(1) infinite}
+.p-cats .c-tester.run .c3{animation:cats-t3 1s steps(1) infinite}`,
   },
-  // flat cap + blueprint tube; the tube sways
-  architect: {
+  // fixer: flat cap + wrench; the wrench works up and down
+  fixer: {
     hold: true,
     layers: [
       {
         // ear tips poke out above the cap; the brim juts past the brow
-        map: { h: '#6E6253', H: '#A3957F', d: '#4E4539' },
+        map: { H: 'A', h: 'A', d: '#4E4539' },
         segs: [[17, 3, r('H', 12)], [16, 4, r('h', 14)], [16, 5, r('h', 16)], [28, 6, 'dddd']],
       },
       {
+        // an open-ended wrench held upright in the paw, jaw up
         g: 'it',
-        map: { b: '#3E78CF', B: '#BBD2F2' },
-        segs: [
-          [28, 16, 'BBB'],
-          ...[17, 18, 20, 21, 23, 24].map(y => [28, y, 'bbb'] as Seg),
-          [28, 19, 'BBB'], [28, 22, 'BBB'], [28, 25, 'BBB'],
-        ],
+        map: { s: '#8C96A3', S: '#5F6874' },
+        segs: [[28, 16, 's..s'], [28, 17, 's..s'], [28, 18, 'ssss'], [29, 19, 'sS'], [29, 20, 'sS'], [29, 21, 'sS'], [29, 22, 'sS'], [29, 23, 'sS'], [29, 24, 'sS']],
       },
     ],
-    anim: '.p-cats .c-architect.run .it{transform-origin:50% 100%;animation:cats-sway 1.6s ease-in-out infinite}',
+    anim: '.p-cats .c-fixer.run .it{animation:cats-st .5s steps(1) infinite}',
   },
-  // top hat between the ears + bow tie + baton; the baton conducts
-  orchestrator: {
+  // conductor: top hat between the ears + bow tie + baton; the baton beats between two poses
+  conductor: {
     hold: true,
     layers: [
       {
-        map: { r: '#8E2332' },
+        map: { r: 'A' },
         segs: [[21, -2, 'wwwww'], [21, -1, 'kKkkk'], [21, 0, 'kKkkk'], [21, 1, 'kKkkk'], [21, 2, 'rrrrr'], [21, 3, 'kKkkk'], [19, 4, 'w' + r('k', 7) + 'w']],
       },
       { map: { r: '#C04257', R: '#8E2332' }, segs: [[21, 16, 'rr.rr'], [21, 17, 'rrRrr'], [21, 18, 'rr.rr']] },
-      { g: 'it', segs: [[28, 16, 'kW'], [29, 15, 'kW'], [30, 14, 'kW'], [31, 13, 'y']] },
+      // the baton swaps between raised and level; the grip pixel stays in the paw
+      { segs: [[28, 17, 'k'], [28, 18, 'k']] },
+      { g: 'pa', segs: [[29, 16, 'kW'], [30, 15, 'kW'], [31, 14, 'y']] },
+      { g: 'pb', segs: [[29, 17, 'WWy'], [29, 18, 'kkk']] },
     ],
-    anim: '.p-cats .c-orchestrator.run .it{transform-origin:0% 100%;animation:cats-conduct .5s ease-in-out infinite}',
+    anim: '',
   },
-  // bandana + eye patch + cutlass; the cutlass lunges
-  explore: {
+  // scout: bandana + eye patch + spyglass
+  scout: {
     hold: true,
     layers: [
       {
         // tied across the brow under the ears, the knot trailing behind
-        map: { r: '#C7563D', W: '#F6F2EA' },
+        map: { r: 'A', W: '#F6F2EA' },
         segs: [[17, 4, r('r', 12)], [16, 5, 'rrrrWrrrrrrWrr'], [14, 4, 'rrr'], [13, 5, 'rrr'], [12, 6, 'rr'], [13, 7, 'r']],
       },
       { map: { k: 'ink' }, segs: [[19, 7, 'kkkkkk'], [25, 8, 'kkk'], [25, 9, 'kkk'], [25, 10, 'kkk']] },
-      { g: 'it', map: { s: '#D3D6DB' }, segs: [[28, 17, 'y'], [28, 18, 'y'], [28, 19, 'y'], [29, 16, 'ks'], [29, 15, 'ks'], [30, 14, 'ks'], [31, 13, 's']] },
+      // a brass spyglass held level, the wide end out front; the lens glints
+      { map: { B: '#BBD2F2' }, segs: [[30, 15, 'kk'], [29, 16, 'kyy'], [28, 17, 'yyyB'], [28, 18, 'oooB'], [29, 19, 'koo'], [30, 20, 'kk']] },
+      { g: 'gl', map: { G: '#FFFFFF' }, segs: [[31, 17, 'G']] },
     ],
-    anim: '.p-cats .c-explore.run .it{transform-origin:0% 100%;animation:cats-lunge .5s ease-in-out infinite}',
+    anim: '.p-cats .c-scout.run .gl{animation:cats-blink 1s steps(1) infinite}',
   },
-  // no costume; the collar carries the colour
-  other: { layers: [], anim: '' },
+  // plain: no costume; the collar carries the colour
+  plain: { layers: [], anim: '' },
 }
 
 // --- render -------------------------------------------------------------------------------
 type Cell = { c: string; g: string; key: string; tone?: Tones }
 
-const svgFor = (name: string, coat: Coat, accent: string): string => {
+// Paints one pose into rect runs, keyed by animation group.
+const paint = (name: string, coat: Coat, accent: string, tail: Seg[]): Map<string, string[]> => {
   const costume = COSTUMES[name]
   const grid: (Cell | null)[][] = Array.from({ length: CAT_H }, () => Array(CAT_W).fill(null))
   const coatColor = (ch: string): string | undefined =>
@@ -300,7 +297,7 @@ const svgFor = (name: string, coat: Coat, accent: string): string => {
         if (ch !== '.' && c && x + i < CAT_W) grid[y + DY][x + i] = { c, g: group, key: ch, tone }
       })
   }
-  fill(TAIL, 'tl')
+  fill(tail, 'tl')
   fill(BODY, 'bd')
   fill(HEAD, 'bd')
   // Far legs first so the near ones overlap them; diagonal pairs share a walk phase.
@@ -345,6 +342,7 @@ const svgFor = (name: string, coat: Coat, accent: string): string => {
         if (ch === '.' || x + i >= CAT_W) return
         let c = map[ch] ?? (ch === 'A' ? accent : ch === 'g' ? '#E3B23C' : PROP[ch])
         if (c === 'ink') c = coat.ink
+        if (c === 'A') c = accent
         if (c) grid[y + DY][x + i] = { c, g: group, key: ch }
       })
   }
@@ -386,9 +384,18 @@ const svgFor = (name: string, coat: Coat, accent: string): string => {
       x = end
     }
   })
-  const g = (k: string) => (groups.has(k) ? `<g class="${k}">${groups.get(k)?.join('')}</g>` : '')
-  const props = [...groups.keys()].filter(k => !['bd', 'la', 'lb', 'tl'].includes(k)).map(g).join('')
-  return `${g('tl')}<g class="bd">${g('bd')}${props}</g>${g('la')}${g('lb')}`
+  return groups
+}
+
+// The tail rides the body's bob and swishes by swapping between two pixel poses (`tl`, `tw`),
+// so it never leaves the grid or pulls away from the rump. Body rects sit straight in `bd`:
+// a nested `bd` would bob twice and leave the props behind.
+const svgFor = (name: string, coat: Coat, accent: string): string => {
+  const groups = paint(name, coat, accent, TAIL)
+  const swish = paint(name, coat, accent, TAIL_SWISH).get('tl') ?? []
+  const g = (k: string, rects = groups.get(k)) => (rects ? `<g class="${k}">${rects.join('')}</g>` : '')
+  const props = [...groups.keys()].filter(k => !['bd', 'la', 'lb', 'tl'].includes(k)).map(k => g(k)).join('')
+  return `<g class="bd">${g('tl')}${g('tw', swish)}${(groups.get('bd') ?? []).join('')}${props}</g>${g('la')}${g('lb')}`
 }
 
 const CAT_CSS = `<style>
@@ -396,16 +403,19 @@ const CAT_CSS = `<style>
 .p-cats .run .la{animation:cats-st .5s steps(1) infinite}
 .p-cats .run .lb{animation:cats-st .5s steps(1) infinite -.25s}
 .p-cats .run .bd{animation:cats-bob .5s steps(1) infinite -.125s}
-.p-cats .run .tl{transform-origin:85% 100%;animation:cats-swish 1.2s ease-in-out infinite}
+.p-cats .tw,.p-cats .pb{opacity:0}
+.p-cats .run .pa{animation:cats-off .5s steps(1) infinite}
+.p-cats .run .pb{animation:cats-on .5s steps(1) infinite}
+.p-cats .run .tl{animation:cats-off 1s steps(1) infinite}
+.p-cats .run .tw{animation:cats-on 1s steps(1) infinite}
 @keyframes cats-st{50%{transform:translateY(-1px)}}
 @keyframes cats-bob{50%{transform:translateY(1px)}}
-@keyframes cats-swish{50%{transform:rotate(-12deg)}}
+@keyframes cats-off{50%{opacity:0}}
+@keyframes cats-on{50%{opacity:1}}
 @keyframes cats-blink{50%{opacity:.25}}
-@keyframes cats-dab{50%{transform:translate(1px,-1px)}}
-@keyframes cats-tick{0%{opacity:0}33%{opacity:1}}
-@keyframes cats-sway{50%{transform:rotate(6deg)}}
-@keyframes cats-conduct{50%{transform:rotate(-24deg)}}
-@keyframes cats-lunge{50%{transform:translateX(1px) rotate(-8deg)}}
+@keyframes cats-t1{0%{opacity:0}25%{opacity:1}}
+@keyframes cats-t2{0%{opacity:0}50%{opacity:1}}
+@keyframes cats-t3{0%{opacity:0}75%{opacity:1}}
 ${Object.values(COSTUMES).map(c => c.anim).filter(Boolean).join('\n')}
 @media (prefers-reduced-motion: reduce){.p-cats .run,.p-cats .run g{animation:none!important}}
 </style>`
@@ -426,7 +436,7 @@ const inner = (costume: string, coat: string, accent: string): string => {
 // `mirror` flips the cat inside its own box (x .. x + CAT_W * scale) so it faces left.
 // The cats dress by role; the tier only reaches them through the accent colour.
 const draw = (x: number, y: number, who: { role: Role; tier: Tier }, o: DrawOptions): string => {
-  const name = COSTUMES[who.role] ? who.role : 'other'
+  const name = COSTUMES[who.role] ? who.role : 'plain'
   const coat = COATS[o.variant] ? o.variant : 'blue'
   const scale = o.scale ?? 1
   const place = o.mirror ? `translate(${x + CAT_W * scale},${y}) scale(${-scale},${scale})` : `translate(${x},${y}) scale(${scale})`

@@ -15,6 +15,7 @@ import {
   shuffleCandidates,
 } from './packs/seasons'
 import type { MonthDay, Resolved, Season } from './packs/seasons'
+import { TASK_ROLES } from './packs/types'
 import type { Pack, Role, Tier } from './packs/types'
 import type { AgentRun, Flow, Panel, Phase, PlannedTask } from '../types'
 
@@ -58,7 +59,7 @@ type ProgressInput = {
   done?: number
   phase?: Phase
   finished?: boolean
-  tasks?: { title?: string; tier?: string; after?: number[] }[]
+  tasks?: { title?: string; tier?: string; role?: string; after?: number[] }[]
 }
 
 // ---------------------------------------------------------------------------
@@ -244,6 +245,12 @@ const tierName = (v: string): string => {
   return TIERS.includes(t) ? t : ''
 }
 
+// Only a task role is kept; anything else is '' and draws as a builder.
+const roleName = (v: string): string => {
+  const r = v.trim().toLowerCase()
+  return (TASK_ROLES as readonly string[]).includes(r) ? r : ''
+}
+
 const cleanTasks = (tasks: ProgressInput['tasks']): PlannedTask[] | undefined =>
   tasks
     ?.filter(t => t.title?.trim())
@@ -251,6 +258,7 @@ const cleanTasks = (tasks: ProgressInput['tasks']): PlannedTask[] | undefined =>
     .map(t => ({
       title: (t.title ?? '').trim(),
       tier: tierName(t.tier ?? ''),
+      role: roleName(t.role ?? ''),
       after: (t.after ?? []).filter(n => Number.isInteger(n) && n > 0).slice(0, MAX_AFTER),
     }))
 
@@ -391,8 +399,8 @@ const rowSvg = (f: Flow, W: number, isWorking: boolean, p: Pack): string => {
   // `direction="rtl"` puts Hebrew words and numbers in reading order; `start` is then the right edge.
   const titleAt = rtl ? `x="${W - 16}" direction="rtl" text-anchor="start"` : 'x="16"'
   const percentAt = rtl ? `x="${CAT_SLOT + 6}" y="${H / 2 + 4.5}"` : `x="${W - CAT_SLOT - 6}" y="${H / 2 + 4.5}" text-anchor="end"`
-  // The band's sprite is the orchestrator, in the pack's first pick ('' gives the cats' blue coat).
-  const sprite = p.draw(rx(W - CAT_SLOT + 1, fit.w), fit.y, { role: 'orchestrator', tier: 'other' }, {
+  // The band's sprite is the conductor, in the pack's first pick ('' gives the cats' blue coat).
+  const sprite = p.draw(rx(W - CAT_SLOT + 1, fit.w), fit.y, { role: 'conductor', tier: 'other' }, {
     variant: p.variantOf(''),
     accent: '#7F77DD',
     isWalking: isWorking,
@@ -598,21 +606,17 @@ const PANE_CSS = `<style>
 // Brand clay, used by the terminal text.
 const CLAY = '#D97757'
 
-// Roles: a relay worker's role comes from the words of its task, then from its tier.
-// First match wins, so a task that is both design and structure draws as the architect.
-const ROLE_WORDS: [role: Role, re: RegExp][] = [
-  ['architect', /architect|schema|data model|interface|contract|boundar|abstraction|system design|api design|migration/i],
-  ['designer', /design|\bui\b|\bux\b|css|style|styling|layout|visual|theme|figma|mockup|icon|animation|responsive|a11y|accessib/i],
-  ['planner', /\bplan|spec\b|scope|roadmap|break ?down|estimate|outline|requirements|triage|prioriti/i],
-]
-const TIER_ROLE: Record<string, Role> = { expert: 'architect' }
+// Roles: the orchestrator sets each planned task's role; a task without one is a builder.
+// A relay worker takes the role of the task whose title matches its description.
+const taskRole = (t?: PlannedTask): Role => (t?.role as Role) || 'builder'
 
-// Anything that is not a relay worker keeps the plain sprite; Explore keeps its pirate.
-const costumeOf = (type: string, text = ''): Role => {
-  if (type === 'Explore') return 'explore'
-  const tier = tierOf(type)
-  if (tier === 'other') return 'other'
-  return ROLE_WORDS.find(([, re]) => re.test(text))?.[0] ?? TIER_ROLE[tier] ?? 'developer'
+const roleOfTask = (f: Flow | null, title: string): Role => taskRole(f?.tasks?.find(p => norm(p.title) === norm(title)))
+
+// Anything that is not a relay worker is plain; Explore is a scout.
+const costumeOf = (f: Flow | null, type: string, text = ''): Role => {
+  if (type === 'Explore') return 'scout'
+  if (tierOf(type) === 'other') return 'plain'
+  return roleOfTask(f, text)
 }
 
 const statusMark = (x: number, y: number, status: string, color: string): string => {
@@ -699,7 +703,7 @@ const progressOf = (a: AgentRun): number | null => {
 
 const ctxOf = (a: AgentRun): number => (a.contextMax ? Math.min(100, Math.round((a.contextTokens / a.contextMax) * 100)) : 0)
 
-const agentSvg = (pk: Pack, W: number, a: AgentRun, at: number): string => {
+const agentSvg = (pk: Pack, W: number, f: Flow | null, a: AgentRun, at: number): string => {
   const s = tr()
   const tier = tierOf(a.type)
   const color = colorOf(tier)
@@ -720,7 +724,7 @@ const agentSvg = (pk: Pack, W: number, a: AgentRun, at: number): string => {
     pk,
     W,
     66,
-    `${rowCat(pk, W, 0, 28, { role: costumeOf(a.type, a.description), tier }, a.description || a.id, false, a.status === 'running', color)}
+    `${rowCat(pk, W, 0, 28, { role: costumeOf(f, a.type, a.description), tier }, a.description || a.id, false, a.status === 'running', color)}
 <text class="t" ${startText(W, TX, 18)} font-family="${FONT}" font-size="13" font-weight="600">${xml(fitText(a.description || a.type, 13, textW))}</text>
 <text ${startText(W, TX, 34)} font-family="${FONT}" font-size="11"><tspan fill="${color}">${xml(tier === 'other' ? a.type : tierWord(tier))}</tspan><tspan class="s">  ${xml(meta.join('  ·  '))}</tspan></text>
 ${steps && stepsW > 30 ? `<text class="t" ${startText(W, TX, 49)} font-family="${FONT}" font-size="11" font-variant-numeric="tabular-nums">${xml(fitText(steps, 11, stepsW))}</text>` : ''}
@@ -742,7 +746,7 @@ const plannedSvg = (pk: Pack, W: number, p: Planned): string => {
     pk,
     W,
     46,
-    `${rowCat(pk, W, 0, 20, { role: costumeOf(tier === 'other' ? 'other' : `relay-${tier}`, p.title), tier }, p.title, true, false, color)}
+    `${rowCat(pk, W, 0, 20, { role: taskRole(p), tier }, p.title, true, false, color)}
 <text class="s" ${startText(W, TX, 18)} font-family="${FONT}" font-size="13" font-weight="600">${xml(fitText(`${p.n}. ${p.title}`, 13, textW))}</text>
 <text ${startText(W, TX, 34)} font-family="${FONT}" font-size="11"><tspan fill="${color}">${xml(tierWord(tier))}</tspan><tspan class="m">  ${xml(meta.filter(Boolean).join('  ·  '))}</tspan></text>
 ${statusMark(mx(W, W - 8), 16, 'planned', color)}
@@ -750,12 +754,12 @@ ${statusMark(mx(W, W - 8), 16, 'planned', color)}
   )
 }
 
-const compactSvg = (pk: Pack, W: number, list: AgentRun[], planned: Planned[], t: ReturnType<typeof totals>): string => {
+const compactSvg = (pk: Pack, W: number, f: Flow | null, list: AgentRun[], planned: Planned[], t: ReturnType<typeof totals>): string => {
   const plannedTier = (tier: string): Tier => (tier in TIER_COLOR ? (tier as Tier) : 'other')
   const icons = [
-    ...list.filter(a => a.status === 'running').map(a => ({ k: costumeOf(a.type, a.description), tier: tierOf(a.type), coat: a.description || a.id, c: colorOf(tierOf(a.type)), s: 'running', dim: false })),
-    ...list.filter(a => a.status !== 'running').map(a => ({ k: costumeOf(a.type, a.description), tier: tierOf(a.type), coat: a.description || a.id, c: colorOf(tierOf(a.type)), s: a.status, dim: false })),
-    ...planned.map(p => ({ k: costumeOf(p.tier in TIER_COLOR && p.tier !== 'other' ? `relay-${p.tier}` : 'other', p.title), tier: plannedTier(p.tier), coat: p.title, c: colorOf(p.tier), s: 'planned', dim: true })),
+    ...list.filter(a => a.status === 'running').map(a => ({ k: costumeOf(f, a.type, a.description), tier: tierOf(a.type), coat: a.description || a.id, c: colorOf(tierOf(a.type)), s: 'running', dim: false })),
+    ...list.filter(a => a.status !== 'running').map(a => ({ k: costumeOf(f, a.type, a.description), tier: tierOf(a.type), coat: a.description || a.id, c: colorOf(tierOf(a.type)), s: a.status, dim: false })),
+    ...planned.map(p => ({ k: taskRole(p), tier: plannedTier(p.tier), coat: p.title, c: colorOf(p.tier), s: 'planned', dim: true })),
   ]
   const { pitch, w: spriteW, h: spriteH } = panelFit(pk)
   const fit = Math.max(1, Math.floor((W - 150) / pitch))
@@ -780,13 +784,12 @@ const compactSvg = (pk: Pack, W: number, list: AgentRun[], planned: Planned[], t
 
 // One (role, tier) per costume, so each card shows all of a pack's sprites in their tier colours.
 const GALLERY: readonly { role: Role; tier: Tier }[] = [
-  { role: 'orchestrator', tier: 'other' },
-  { role: 'planner', tier: 'light' },
-  { role: 'architect', tier: 'expert' },
-  { role: 'developer', tier: 'medium' },
-  { role: 'designer', tier: 'careful' },
-  { role: 'explore', tier: 'medium' },
-  { role: 'other', tier: 'heavy' },
+  { role: 'conductor', tier: 'other' },
+  { role: 'builder', tier: 'medium' },
+  { role: 'fixer', tier: 'heavy' },
+  { role: 'tester', tier: 'light' },
+  { role: 'scout', tier: 'careful' },
+  { role: 'plain', tier: 'other' },
 ]
 const CARD_H = 84
 const CARD_PAD = 12
@@ -1127,9 +1130,14 @@ export const register: Register = (on, options) => {
               properties: {
                 title: { type: 'string', description: 'A few words; reused verbatim as the Agent description.' },
                 tier: { type: 'string', enum: [...TIERS] },
+                role: {
+                  type: 'string',
+                  enum: [...TASK_ROLES],
+                  description: 'The job, drawn as the sprite costume: builder (features, changes), fixer (debugging, root cause), tester (builds, tests, checks), scout (searching, reading code).',
+                },
                 after: { type: 'array', items: { type: 'integer' }, description: 'Numbers of the tasks this one waits for.' },
               },
-              required: ['title', 'tier'],
+              required: ['title', 'tier', 'role'],
             },
           },
         },
@@ -1506,7 +1514,7 @@ export const register: Register = (on, options) => {
       if (p.isCompact) {
         return (
           <Box flexDirection="column" gap={1} alignItems={align}>
-            <Svg source={compactSvg(pk, W, list, planned, t)} alt={`${list.length} ${s.agentsCount}, ${summary}`} width={W} height={COMPACT_H} />
+            <Svg source={compactSvg(pk, W, f, list, planned, t)} alt={`${list.length} ${s.agentsCount}, ${summary}`} width={W} height={COMPACT_H} />
             {toggleCompact}
           </Box>
         )
@@ -1527,12 +1535,12 @@ export const register: Register = (on, options) => {
             {isEmpty && <Text dimColor>{s.empty}</Text>}
             {running.length > 0 && section('h-run', `${s.running} · ${running.length}`)}
             {running.map(a => (
-              <Svg key={a.id} source={agentSvg(pk, W, a, at)} alt={`${a.description}: ${modelName(a.model)}, ${s.isRunning}`} width={W} height={66} />
+              <Svg key={a.id} source={agentSvg(pk, W, f, a, at)} alt={`${a.description}: ${modelName(a.model)}, ${s.isRunning}`} width={W} height={66} />
             ))}
             {finished.length > 0 && toggleDone}
             {!p.isDoneCollapsed &&
               finished.map(a => (
-                <Svg key={a.id} source={agentSvg(pk, W, a, at)} alt={`${a.description}: ${modelName(a.model)}, ${s.isFinished}`} width={W} height={66} />
+                <Svg key={a.id} source={agentSvg(pk, W, f, a, at)} alt={`${a.description}: ${modelName(a.model)}, ${s.isFinished}`} width={W} height={66} />
               ))}
             {planned.length > 0 && section('h-plan', `${s.planned} · ${planned.length}`)}
             {planned.map(pl => (

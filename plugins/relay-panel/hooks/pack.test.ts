@@ -8,7 +8,7 @@ const PROGRESS = 'mcp__relay-panel__progress'
 const band = { hasSurvey: false, isWorking: false, maxRows: 4, bodyColumns: 100, scroll: { offset: 0, bodyRows: 4 }, view: {} }
 const pane = { title: '', isFocused: false, bodyColumns: 60, placement: 'dock', scroll: { offset: 0, bodyRows: 30 }, view: {} } as const
 
-// Local time; the seasons are local. June is off season: the everyday pack (crabs by default) shows.
+// Local time; the seasons are local. June is off season: the everyday pack (clawd by default) shows.
 const at = (y: number, m: number, d: number, h = 0, min = 0) => new Date(y, m - 1, d, h, min).getTime()
 const JUNE = at(2026, 6, 1, 12)
 
@@ -132,7 +132,7 @@ test('pack tool: list heads with the settings line, then every pack, the one sho
     expect(line).toBe(`${id}: ${p.name} (${p.variants.length} ${p.variants.length === 1 ? 'variant' : 'variants'})${id === DEFAULT_PACK ? ' (active)' : ''}`)
   }
   // A one-variant pack reads in the singular.
-  expect(lines.find(l => l.startsWith('crabs: '))).toContain('(1 variant)')
+  expect(lines.find(l => l.startsWith('clawd: '))).toContain('(1 variant)')
 })
 
 test('pack tool: set stores the everyday pack and redraws the band and the panel', async ($, on) => {
@@ -444,7 +444,7 @@ test('set with seasons off in December skips nothing', async ($, on) => {
 // The plugin picks with Math.random; packs/seasons.test.ts pins the draw. Here every
 // assertion holds whatever the draw.
 
-const EVERYDAY = ['cats', 'crabs', 'dogs']
+const EVERYDAY = ['cats', 'clawd', 'dogs']
 
 test('shuffle: one pick per session; consecutive sessions differ; a new flow does not re-pick', async ($, on) => {
   // Dec 31 with Christmas skipped: the shuffle pick shows.
@@ -453,7 +453,7 @@ test('shuffle: one pick per session; consecutive sessions differ; a new flow doe
   const first = String(store.get('lastShuffle'))
   expect(EVERYDAY).toContain(first)
   expect((await drawn($)).band).toContain(scope(first))
-  expect(await firstLine($)).toBe(`everyday: shuffle (cats, crabs, dogs) · seasons on · showing: ${first} · christmas skipped until Dec 31 · next: turkeys Nov 15`)
+  expect(await firstLine($)).toBe(`everyday: shuffle (cats, clawd, dogs) · seasons on · showing: ${first} · christmas skipped until Dec 31 · next: turkeys Nov 15`)
 
   // Next session: last session's pick is left out.
   await resume($)
@@ -492,7 +492,7 @@ test('shuffle [ids]: stores the list, picks now, and a second shuffle picks the 
 
   // `set shuffle` shuffles every non-holiday pack.
   const all = (await $.tool.call({ tool: PACK, action: 'set', id: 'shuffle' } as never)) as { result: string }
-  expect(all.result).toMatch(/^ok: shuffling cats, crabs, dogs; .+ now$/)
+  expect(all.result).toMatch(/^ok: shuffling cats, clawd, dogs; .+ now$/)
   expect(store.get('shuffleList')).toEqual([])
   expect(store.get('lastShuffle')).not.toBe(second)
 })
@@ -501,7 +501,7 @@ test('shuffle: holiday and unknown ids are refused, naming the valid ones; nothi
   const store = new Map<string, unknown>()
   await session($, on, store)
   const r = await $.command.run({ command: 'relay-pack', args: 'shuffle turkeys dragons' } as never)
-  expect(r.text).toBe('cannot shuffle "turkeys" (holiday pack), "dragons" (unknown); valid ids: cats, crabs, dogs')
+  expect(r.text).toBe('cannot shuffle "turkeys" (holiday pack), "dragons" (unknown); valid ids: cats, clawd, dogs')
   const t = (await $.tool.call({ tool: PACK, action: 'shuffle', ids: ['christmas'] } as never)) as { deny: string }
   expect(t.deny).toContain('"christmas" (holiday pack)')
   expect(store.has('everyday')).toBe(false)
@@ -514,7 +514,7 @@ test('shuffle during a season skips it, like set', async ($, on) => {
   const r = (await $.tool.call({ tool: PACK, action: 'shuffle' } as never)) as { result: string }
   const pick = String(store.get('lastShuffle'))
   expect(EVERYDAY).toContain(pick)
-  expect(r.result).toBe(`ok: shuffling cats, crabs, dogs; ${nameOf(pick)} now; ${nameOf('christmas')} skipped until Dec 31`)
+  expect(r.result).toBe(`ok: shuffling cats, clawd, dogs; ${nameOf(pick)} now; ${nameOf('christmas')} skipped until Dec 31`)
   expect(store.get('skipSeason')).toBe('christmas:2026')
   expect((await drawn($)).band).toContain(scope(pick))
 })
@@ -532,8 +532,8 @@ test('gallery: one card per pack, labelled; Use sets the everyday pack', async (
   for (const id of packIds()) {
     const card = c.find(x => x.source.includes(scope(id)))
     expect(card).toBeDefined()
-    // Seven sprites, one per costume.
-    expect(card?.source.split(scope(id)).length).toBe(8)
+    // Six sprites, one per role.
+    expect(card?.source.split(scope(id)).length).toBe(7)
   }
   expect(altOf(c, DEFAULT_PACK)?.endsWith(', Everyday · Showing')).toBe(true)
   expect(altOf(c, 'turkeys')?.endsWith(', Holiday · Nov 15-30')).toBe(true)

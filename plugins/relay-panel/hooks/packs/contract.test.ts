@@ -69,7 +69,7 @@ for (const pack of PACKS) {
   })
 
   test(`${pack.id}: mirror and scale change the transform, dim lowers opacity`, () => {
-    const who = { role: 'developer' as Role, tier: 'medium' as Tier }
+    const who = { role: 'builder' as Role, tier: 'medium' as Tier }
     const transform = (s: string) => s.match(/transform="([^"]+)"/)?.[1]
     const opacity = (s: string) => Number(s.match(/opacity="([\d.]+)"/)?.[1] ?? 1)
     const plain = pack.draw(10, 4, who, { variant, accent: ACCENT })

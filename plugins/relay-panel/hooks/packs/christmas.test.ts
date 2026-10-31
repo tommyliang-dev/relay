@@ -17,7 +17,7 @@ test('christmas: pack metadata', () => {
   expect(christmas.name).toBe('Christmas')
   expect(christmas.w).toBe(32)
   expect(christmas.h).toBe(28)
-  expect(christmas.roles.length).toBe(7)
+  expect(christmas.roles.length).toBe(6)
   for (const r of christmas.roles) expect(ROLES.includes(r)).toBe(true)
   expect(christmas.variants).toBe(VARIANTS)
   expect(christmas.variants.length).toBe(6)
@@ -51,82 +51,77 @@ test('christmas: every role, tier and variant draws a scoped group inside the gr
       }
 })
 
-test('christmas: the accent sits on every character, in its collar spot, and the tier changes nothing else', () => {
+test('christmas: the accent tints every character and the tier changes nothing else', () => {
   for (const role of ROLES)
     for (const variant of christmas.variants) {
       const a = christmas.draw(0, 0, { role, tier: 'expert' }, { variant, accent: ACCENT })
-      const b = christmas.draw(0, 0, { role, tier: 'light' }, { variant, accent: ACCENT })
-      expect(a).toBe(b)
+      expect(a).toBe(christmas.draw(0, 0, { role, tier: 'light' }, { variant, accent: ACCENT }))
       expect(a).toContain(ACCENT)
-      // the accent lives in the body group, never on a leg or prop
-      expect(group(a, 'bd')).toContain(ACCENT)
       const other = christmas.draw(0, 0, { role, tier: 'light' }, { variant, accent: '#BA7517' })
       expect(other).toContain('#BA7517')
       expect(other.includes(ACCENT)).toBe(false)
-      // swapping the accent swaps exactly the accent rects
-      expect(other.replaceAll('#BA7517', ACCENT)).toBe(a)
     }
 })
 
 test('christmas: each role is its own character', () => {
-  const svgs = Object.fromEntries(ROLES.map(role => [role, group(figure(0, 0, role, { variant: 'brown', accent: ACCENT }), 'bd')]))
-  const bodies = new Set(Object.values(svgs))
+  const bodies = new Set(ROLES.map(role => group(figure(0, 0, role, { variant: 'brown', accent: ACCENT }), 'bd')))
   expect(bodies.size).toBe(ROLES.length)
-  // Santa and Mrs Claus ignore the variant; elves, sleigh and reindeer wear it
-  for (const role of ['orchestrator', 'planner'])
-    expect(figure(0, 0, role, { variant: 'brown', accent: ACCENT })).toBe(figure(0, 0, role, { variant: 'white', accent: ACCENT }).replace('v-white', 'v-brown'))
-  for (const role of ['architect', 'developer', 'designer', 'explore', 'other'])
-    expect(figure(0, 0, role, { variant: 'brown', accent: ACCENT }) === figure(0, 0, role, { variant: 'white', accent: ACCENT }).replace('v-white', 'v-brown')).toBe(false)
+  // Santa and Mrs Claus ignore the variant; the gingerbread, nutcracker, elf and reindeer wear it
+  const same = (role: string) =>
+    figure(0, 0, role, { variant: 'brown', accent: ACCENT }) === figure(0, 0, role, { variant: 'white', accent: ACCENT }).replace('v-white', 'v-brown')
+  for (const role of ['conductor', 'tester']) expect(same(role)).toBe(true)
+  for (const role of ['builder', 'fixer', 'scout', 'plain']) expect(same(role)).toBe(false)
 })
 
-test('christmas: walkers have two leg groups, the sleigh flies on none and trails sparkles', () => {
-  for (const role of ROLES.filter(r => r !== 'explore')) {
+test('christmas: every character walks on two leg groups', () => {
+  for (const role of ROLES) {
     const svg = figure(0, 0, role, { variant: 'grey', accent: ACCENT })
     expect(rects(group(svg, 'la')).length > 0).toBe(true)
     expect(rects(group(svg, 'lb')).length > 0).toBe(true)
   }
-  const sleigh = figure(0, 0, 'explore', { variant: 'grey', accent: ACCENT })
-  expect(sleigh.includes('class="la"')).toBe(false)
-  expect(sleigh.includes('class="lb"')).toBe(false)
-  for (const s of ['s1', 's2', 's3']) expect(rects(group(sleigh, s)).length > 0).toBe(true)
-  // the trail sits beside the body, so it does not hover with it
-  expect(sleigh.indexOf('class="s1"') < sleigh.indexOf('class="bd"')).toBe(true)
-  // the sleigh hovers off the ground line
-  expect(rects(sleigh).every(([, y]) => y < XMAS_H - 3)).toBe(true)
+})
+
+test('christmas: the tester ticks three boxes in turn', () => {
+  const svg = figure(0, 0, 'tester', { variant: 'grey', accent: ACCENT })
+  for (const c of ['c1', 'c2', 'c3']) expect(rects(group(svg, c)).length).toBe(1)
+  for (const [c, at] of [['c1', 25], ['c2', 50], ['c3', 75]] as const) {
+    expect(christmas.css).toContain(`.p-christmas .c-tester.run .${c}{animation:christmas-t${c[1]} 1s steps(1) infinite}`)
+    expect(christmas.css).toContain(`@keyframes christmas-t${c[1]}{0%{opacity:0}${at}%{opacity:1}}`)
+  }
 })
 
 test('christmas: the reindeer has antlers, a bell and a nose group; only rudolph glows', () => {
   for (const variant of christmas.variants) {
-    const svg = figure(0, 0, 'other', { variant, accent: ACCENT })
+    const svg = figure(0, 0, 'plain', { variant, accent: ACCENT })
     expect(rects(group(svg, 'ns')).length > 0).toBe(true)
     expect(rects(group(svg, 'bl')).length > 0).toBe(true)
     expect(rects(group(svg, 'tl')).length > 0).toBe(true)
     expect(svg).toContain('#E8DCBE') // pale bone antlers on every coat
   }
-  expect(group(figure(0, 0, 'other', { variant: 'rudolph', accent: ACCENT }), 'ns')).toContain('#FF2F2A')
-  expect(group(figure(0, 0, 'other', { variant: 'brown', accent: ACCENT }), 'ns').includes('#FF2F2A')).toBe(false)
+  expect(group(figure(0, 0, 'plain', { variant: 'rudolph', accent: ACCENT }), 'ns')).toContain('#FF2F2A')
+  expect(group(figure(0, 0, 'plain', { variant: 'brown', accent: ACCENT }), 'ns').includes('#FF2F2A')).toBe(false)
   expect(christmas.css).toContain('.p-christmas .v-rudolph.run .ns{animation:christmas-glow')
 })
 
 test('christmas: placement, mirror, dim, walking and fallbacks', () => {
-  const plain = figure(10, 4, 'developer', { variant: 'tan', accent: ACCENT })
+  const plain = figure(10, 4, 'builder', { variant: 'tan', accent: ACCENT })
   expect(plain).toContain('transform="translate(10,4) scale(1)"')
   expect(plain).toContain('opacity="1"')
-  const mirrored = figure(10, 4, 'developer', { variant: 'tan', accent: ACCENT, mirror: true, scale: 2 })
+  const mirrored = figure(10, 4, 'builder', { variant: 'tan', accent: ACCENT, mirror: true, scale: 2 })
   expect(mirrored).toContain(`transform="translate(${10 + XMAS_W * 2},4) scale(-2,2)"`)
   expect(mirrored === plain).toBe(false)
-  expect(figure(0, 0, 'planner', { variant: 'grey', accent: ACCENT, dim: true })).toContain('opacity="0.45"')
-  expect(figure(0, 0, 'planner', { variant: 'grey', accent: ACCENT, isWalking: true })).toContain('class="c-planner v-grey run"')
-  expect(figure(0, 0, 'nope', { variant: 'plaid', accent: ACCENT })).toBe(figure(0, 0, 'other', { variant: 'brown', accent: ACCENT }))
+  expect(figure(0, 0, 'tester', { variant: 'grey', accent: ACCENT, dim: true })).toContain('opacity="0.45"')
+  expect(figure(0, 0, 'tester', { variant: 'grey', accent: ACCENT, isWalking: true })).toContain('class="c-tester v-grey run"')
+  expect(figure(0, 0, 'nope', { variant: 'plaid', accent: ACCENT })).toBe(figure(0, 0, 'plain', { variant: 'brown', accent: ACCENT }))
   const odd = christmas.draw(0, 0, { role: 'nope' as Role, tier: 'nope' as Tier }, { variant: 'plaid', accent: ACCENT })
   expect(odd.startsWith('<g class="p-christmas">')).toBe(true)
 })
 
 test('christmas: cached markup is identical and runs merge into wide rects', () => {
-  const a = figure(0, 0, 'architect', { variant: 'teal' as string, accent: '#7F77DD' })
-  const b = figure(0, 0, 'architect', { variant: 'teal' as string, accent: '#7F77DD' })
+  const a = figure(0, 0, 'fixer', { variant: 'tan', accent: '#7F77DD' })
+  const b = figure(0, 0, 'fixer', { variant: 'tan', accent: '#7F77DD' })
   expect(a).toBe(b)
-  expect(rects(figure(0, 0, 'orchestrator', { variant: 'brown', accent: ACCENT })).some(([, , w]) => w > 6)).toBe(true)
+  expect(rects(figure(0, 0, 'conductor', { variant: 'brown', accent: ACCENT })).some(([, , w]) => w > 6)).toBe(true)
 })
 
 test('christmas: css is one style block scoped under .p-christmas with christmas- keyframes', () => {
@@ -142,9 +137,10 @@ test('christmas: css is one style block scoped under .p-christmas with christmas
   for (const f of frames) expect(f.startsWith('christmas-')).toBe(true)
   const used = [...christmas.css.matchAll(/animation:\s*([\w-]+)/g)].map(m => m[1]).filter(n => n !== 'none')
   for (const n of used) expect(frames.includes(n)).toBe(true)
-  // one prop motion per role, the sleigh hovers and twinkles, reduced motion turns it all off
-  for (const sel of ['.c-orchestrator.run .it', '.c-planner.run .c3', '.c-architect.run .it', '.c-developer.run .cur', '.c-designer.run .it', '.c-explore.run .bd', '.c-explore.run .s3', '.run .bl'])
+  // props swap between drawn poses, the lantern flickers, the bell rings; nothing rotates or scales
+  for (const sel of ['.run .it', '.run .iu', '.c-tester.run .c3', '.c-scout.run .fl', '.run .bl'])
     expect(christmas.css).toContain(`.p-christmas ${sel}{`)
+  expect(christmas.css).not.toMatch(/rotate|scale\(/)
   expect(christmas.css).toContain('prefers-reduced-motion')
   expect(christmas.css).toContain('.p-christmas .run,.p-christmas .run g{animation:none!important}')
 })

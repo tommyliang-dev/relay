@@ -22,27 +22,27 @@ const at = (y: number, m: number, d: number, h = 0, min = 0) => new Date(y, m - 
 const same = (a: Date, b: Date) => expect(a.getTime()).toBe(b.getTime())
 
 test('seasons: the table and the off-season pack', () => {
-  expect(OFF_SEASON).toBe('crabs')
+  expect(OFF_SEASON).toBe('clawd')
   expect(SEASONS.map(s => s.id)).toEqual(['turkeys', 'christmas'])
 })
 
 test('seasonalPackAt: each boundary day', () => {
-  expect(seasonalPackAt(at(2026, 11, 14, 23, 59), all)).toBe('crabs')
+  expect(seasonalPackAt(at(2026, 11, 14, 23, 59), all)).toBe('clawd')
   expect(seasonalPackAt(at(2026, 11, 15), all)).toBe('turkeys')
   expect(seasonalPackAt(at(2026, 11, 30, 23, 59), all)).toBe('turkeys')
   expect(seasonalPackAt(at(2026, 12, 1), all)).toBe('christmas')
-  expect(seasonalPackAt(at(2026, 12, 1), noChristmas)).toBe('crabs')
+  expect(seasonalPackAt(at(2026, 12, 1), noChristmas)).toBe('clawd')
   expect(seasonalPackAt(at(2026, 12, 31, 23, 59), all)).toBe('christmas')
-  expect(seasonalPackAt(at(2027, 1, 1), all)).toBe('crabs')
-  expect(seasonalPackAt(at(2026, 6, 1), all)).toBe('crabs')
+  expect(seasonalPackAt(at(2027, 1, 1), all)).toBe('clawd')
+  expect(seasonalPackAt(at(2026, 6, 1), all)).toBe('clawd')
 })
 
 test('seasonalPackAt: a season whose pack is not registered falls back to the off-season pack', () => {
-  expect(seasonalPackAt(at(2026, 11, 20), () => false)).toBe('crabs')
+  expect(seasonalPackAt(at(2026, 11, 20), () => false)).toBe('clawd')
 })
 
 test('seasonalPackAt: leap-year February is safe', () => {
-  expect(seasonalPackAt(at(2028, 2, 29), all)).toBe('crabs')
+  expect(seasonalPackAt(at(2028, 2, 29), all)).toBe('clawd')
 })
 
 test('nextSeasonAt: the next registered season after now', () => {
@@ -58,7 +58,7 @@ test('nextSeasonAt: the next registered season after now', () => {
 
 // --- resolvePack: the everyday pack, the seasons, skips and shuffles.
 
-const REG = ['cats', 'crabs', 'dogs', 'turkeys', 'christmas'] as const
+const REG = ['cats', 'clawd', 'dogs', 'turkeys', 'christmas'] as const
 const JUNE = at(2026, 6, 1, 12)
 const TURKEY_DAY = at(2026, 11, 20, 12)
 const DEC = at(2026, 12, 10, 12)
@@ -126,7 +126,7 @@ test('resolvePack: a stale skip (its season over) is ignored', () => {
 })
 
 test('shuffleCandidates: the list, registered, never a holiday pack; empty means every everyday pack', () => {
-  expect(shuffleCandidates([], REG)).toEqual(['cats', 'crabs', 'dogs'])
+  expect(shuffleCandidates([], REG)).toEqual(['cats', 'clawd', 'dogs'])
   expect(shuffleCandidates(['dogs', 'cats'], REG)).toEqual(['cats', 'dogs'])
   expect(shuffleCandidates(['turkeys', 'dogs'], REG)).toEqual(['dogs'])
   expect(shuffleCandidates(['dodos'], REG)).toEqual([])
@@ -137,9 +137,9 @@ test('pickShuffle: no back-to-back repeat, a single candidate may repeat, none d
   const pick = (o: { shuffleList?: string[]; lastShuffle?: string; random?: () => number; registered?: readonly string[] }) =>
     pickShuffle({ shuffleList: o.shuffleList ?? [], registered: o.registered ?? REG, lastShuffle: o.lastShuffle, random: o.random ?? (() => 0) })
   expect(pick({})).toBe('cats')
-  expect(pick({ lastShuffle: 'cats' })).toBe('crabs')
+  expect(pick({ lastShuffle: 'cats' })).toBe('clawd')
   expect(pick({ lastShuffle: 'cats', random: () => 0.99 })).toBe('dogs')
-  expect(pick({ random: () => 0.5 })).toBe('crabs')
+  expect(pick({ random: () => 0.5 })).toBe('clawd')
   // Never a holiday pack, whatever the random draw.
   for (const r of [0, 0.2, 0.4, 0.6, 0.8, 0.999]) expect(isHoliday(pick({ random: () => r }))).toBe(false)
   expect(pick({ shuffleList: ['dogs'], lastShuffle: 'dogs' })).toBe('dogs')
@@ -150,7 +150,7 @@ test('pickShuffle: no back-to-back repeat, a single candidate may repeat, none d
 
 test('resolvePack: shuffle draws the session\'s pick, or makes one with random', () => {
   expect(resolvePack(st({ everyday: SHUFFLE, shuffled: 'dogs' }))).toMatchObject({ id: 'dogs', shuffled: 'dogs' })
-  expect(resolvePack(st({ everyday: SHUFFLE, lastShuffle: 'cats' }))).toMatchObject({ id: 'crabs', shuffled: 'crabs' })
+  expect(resolvePack(st({ everyday: SHUFFLE, lastShuffle: 'cats' }))).toMatchObject({ id: 'clawd', shuffled: 'clawd' })
   expect(resolvePack(st({ everyday: SHUFFLE, shuffleList: ['dogs'] })).id).toBe('dogs')
   // In a skipped season the shuffle pick shows.
   expect(resolvePack(st({ now: DEC, everyday: SHUFFLE, shuffled: 'dogs', skipSeason: 'christmas:2026' })).id).toBe('dogs')

@@ -66,25 +66,28 @@ test('turkeys: the ribbon sits in the same place on every costume', () => {
       .filter(([x, y, w]) => y === 10 && x === 20 && w === 5)
   for (const role of ROLES) expect(bands(role).length >= 1).toBe(true)
   // The band is drawn in the accent, so a different accent changes only those pixels.
-  const a = turkey(0, 0, 'other', { variant: 'slate', accent: '#111111' })
-  const b = turkey(0, 0, 'other', { variant: 'slate', accent: '#EEEEEE' })
+  const a = turkey(0, 0, 'plain', { variant: 'slate', accent: '#111111' })
+  const b = turkey(0, 0, 'plain', { variant: 'slate', accent: '#EEEEEE' })
   expect(a === b).toBe(false)
   expect(a.replaceAll('#111111', '#EEEEEE')).toBe(b)
 })
 
 test('turkeys: tier does not change the drawing', () => {
   const o = { variant: 'narragansett', accent: ACCENT }
-  for (const tier of TIERS) expect(turkeys.draw(0, 0, { role: 'developer', tier }, o)).toBe(turkeys.draw(0, 0, { role: 'developer', tier: 'expert' }, o))
+  for (const tier of TIERS) expect(turkeys.draw(0, 0, { role: 'builder', tier }, o)).toBe(turkeys.draw(0, 0, { role: 'builder', tier: 'expert' }, o))
 })
 
 test('turkeys: unknown role, tier and variant fall back without throwing', () => {
   const svg = turkeys.draw(0, 0, { role: 'nope' as Role, tier: 'nope' as Tier }, { variant: 'plaid', accent: ACCENT })
-  expect(svg).toBe(turkey(0, 0, 'other', { variant: BREEDS[0], accent: ACCENT }))
+  expect(svg).toBe(turkey(0, 0, 'plain', { variant: BREEDS[0], accent: ACCENT }))
 })
 
 test('turkeys: the fan, legs and snood are their own animated groups', () => {
-  const svg = turkey(0, 0, 'other', { variant: 'bronze', accent: ACCENT })
-  for (const cls of ['tl', 'bd', 'la', 'lb', 'sn']) expect(svg).toContain(`<g class="${cls}">`)
+  const svg = turkey(0, 0, 'plain', { variant: 'bronze', accent: ACCENT })
+  for (const cls of ['tl', 'tw', 'bd', 'la', 'lb', 'sn']) expect(svg).toContain(`<g class="${cls}">`)
+  // the fan and its flared pose ride inside the single body group
+  expect(svg).toContain('<g class="bd"><g class="tl">')
+  expect(svg.match(/class="bd"/g)?.length).toBe(1)
   // The fan rises above the back: its top is higher than any body pixel.
   const tailTop = Math.min(...rects(group(svg, 'tl')).map(([, y]) => y))
   const bodyTop = Math.min(...rects(svg.slice(svg.indexOf('<g class="bd">'))).map(([, y]) => y))
@@ -104,26 +107,26 @@ test('turkeys: a held prop lifts the wing to the same anchor on every costume', 
     [...turkey(0, 0, role, { variant: 'bronze', accent: ACCENT }).matchAll(/<rect x="(\d+)" y="(\d+)" width="(\d+)" height="1" fill="([^"]+)"/g)].some(
       m => Number(m[2]) >= 19 && Number(m[1]) + Number(m[3]) >= 27 && BRONZE_WING.has(m[4]),
     )
-  for (const role of ROLES.filter(c => c !== 'other')) expect(tip(role)).toBe(true)
-  expect(tip('other')).toBe(false)
+  for (const role of ROLES.filter(c => c !== 'plain')) expect(tip(role)).toBe(true)
+  expect(tip('plain')).toBe(false)
 })
 
 test('turkeys: placement, mirror, dim, walking and caching', () => {
-  const plain = turkey(10, 4, 'developer', { variant: 'slate', accent: ACCENT })
+  const plain = turkey(10, 4, 'builder', { variant: 'slate', accent: ACCENT })
   expect(plain).toContain('transform="translate(10,4) scale(1)"')
   expect(plain).toContain('opacity="1"')
-  const mirrored = turkey(10, 4, 'developer', { variant: 'slate', accent: ACCENT, mirror: true, scale: 2 })
+  const mirrored = turkey(10, 4, 'builder', { variant: 'slate', accent: ACCENT, mirror: true, scale: 2 })
   expect(mirrored).toContain(`transform="translate(${10 + TURKEY_W * 2},4) scale(-2,2)"`)
   expect(mirrored === plain).toBe(false)
-  expect(turkey(0, 0, 'planner', { variant: 'royal-palm', accent: ACCENT, dim: true })).toContain('opacity="0.45"')
-  expect(turkey(0, 0, 'planner', { variant: 'royal-palm', accent: ACCENT, isWalking: true })).toContain('class="turkey t-planner run"')
-  expect(turkey(0, 0, 'architect', { variant: 'bourbon-red', accent: '#7F77DD' })).toBe(turkey(0, 0, 'architect', { variant: 'bourbon-red', accent: '#7F77DD' }))
+  expect(turkey(0, 0, 'tester', { variant: 'royal-palm', accent: ACCENT, dim: true })).toContain('opacity="0.45"')
+  expect(turkey(0, 0, 'tester', { variant: 'royal-palm', accent: ACCENT, isWalking: true })).toContain('class="turkey t-tester run"')
+  expect(turkey(0, 0, 'fixer', { variant: 'bourbon-red', accent: '#7F77DD' })).toBe(turkey(0, 0, 'fixer', { variant: 'bourbon-red', accent: '#7F77DD' }))
   expect(rects(plain).some(([, , w]) => w > 1)).toBe(true)
 })
 
 test('turkeys: white breeds keep a grey outline', () => {
   for (const [variant, grey] of [['white-holland', '#9A958D'], ['royal-palm', '#8E8A84'], ['bourbon-red', '#9A8E82']]) {
-    const svg = turkey(0, 0, 'other', { variant, accent: ACCENT })
+    const svg = turkey(0, 0, 'plain', { variant, accent: ACCENT })
     expect(svg).toContain(`fill="${grey}"`)
     expect(/fill="#F[0-9A-F]{5}"/.test(svg)).toBe(true)
   }
@@ -142,7 +145,8 @@ test('turkeys: CSS is one scoped style block with turkeys-* keyframes', () => {
   for (const f of frames) expect(f.startsWith('turkeys-')).toBe(true)
   const used = [...css.matchAll(/animation:\s*([\w-]+)/g)].map(m => m[1]).filter(n => n !== 'none')
   for (const n of used) expect(frames.includes(n)).toBe(true)
-  for (const s of ['.p-turkeys .run .tl', '@keyframes turkeys-puff', '.p-turkeys .run .sn', '@keyframes turkeys-wobble', '.p-turkeys .t-planner.run .c3', '.p-turkeys .t-orchestrator.run .it'])
+  for (const s of ['.p-turkeys .run .tl', '.p-turkeys .run .tw', '.p-turkeys .run .sn', '@keyframes turkeys-wobble', '.p-turkeys .t-tester.run .c3', '.p-turkeys .run .pb'])
     expect(css).toContain(s)
+  expect(css).not.toMatch(/rotate|scale\(/)
   expect(css).toContain('.p-turkeys .run,.p-turkeys .run g{animation:none!important}')
 })

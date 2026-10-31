@@ -45,8 +45,8 @@ Install relay for me:
    - /relay <task> runs a task through relay.
    - /relay-agents opens the agents panel.
    - /relay-pack lists the sprite packs; /relay-pack shuffle, /relay-pack seasons on|off and /relay-pack preview.
-   - The five sprite packs: cats, crabs, dogs, turkeys and christmas.
-   - Holiday packs show by themselves: turkeys Nov 15-30, Christmas in December, and my everyday pack the rest of the year (crabs unless I change it).
+   - The five sprite packs: cats, clawd, dogs, turkeys and christmas.
+   - Holiday packs show by themselves: turkeys Nov 15-30, Christmas in December, and my everyday pack the rest of the year (clawd unless I change it).
 ````
 
 Good for: trying relay with nothing global changed except an optional model block.
@@ -86,8 +86,8 @@ Install relay for me and make it my default way to delegate:
    - /relay <task> runs a task through relay.
    - /relay-agents opens the agents panel.
    - /relay-pack lists the sprite packs; /relay-pack shuffle, /relay-pack seasons on|off and /relay-pack preview.
-   - The five sprite packs: cats, crabs, dogs, turkeys and christmas.
-   - Holiday packs show by themselves: turkeys Nov 15-30, Christmas in December, and my everyday pack the rest of the year (crabs unless I change it).
+   - The five sprite packs: cats, clawd, dogs, turkeys and christmas.
+   - Holiday packs show by themselves: turkeys Nov 15-30, Christmas in December, and my everyday pack the rest of the year (clawd unless I change it).
 ````
 
 Good for: every session delegates the same way without typing `/relay`. The working rules live in the skill, so updating relay updates them.
@@ -160,11 +160,24 @@ expert runs on Opus 5.5 unless you choose Baller.
 
 ## Sprite packs
 
+Each sprite is dressed by its role. The main session is the conductor. When relay plans, it gives every task a role, and the worker running it wears that costume:
+
+| Role | Who | Cats wear |
+| --- | --- | --- |
+| conductor | the main session | top hat and baton |
+| builder | features and changes | headphones and laptop |
+| fixer | debugging, root cause | flat cap and wrench |
+| tester | builds, tests, checks | spectacles and clipboard |
+| scout | searching and reading code; also the Explore agent | pirate with a spyglass |
+| plain | any other subagent | collar only |
+
+The tier colour tints the costume's main piece and the collar.
+
 - **cats**: British Shorthairs in 8 coats, dressed by role.
-- **crabs** (the default everyday pack): the original crabs, dressed by tier.
+- **clawd** (the default everyday pack): the original crab, dressed by tier instead of role.
 - **dogs**: corgi, husky, samoyed, bichon frise, maltese and shiba, dressed by role.
 - **turkeys** (holiday): six heritage breeds with fanned tails, dressed by role.
-- **christmas** (holiday): Santa conducts, Mrs Claus plans, elves build, design and code, the flying sled explores, and reindeer (Rudolph included) are everyone else.
+- **christmas** (holiday): Santa conducts, a gingerbread man builds, a nutcracker fixes, Mrs Claus tests, an elf scouts with a lantern, and reindeer (Rudolph included) are everyone else.
 
 | Dates | Holiday pack |
 | --- | --- |
@@ -173,14 +186,14 @@ expert runs on Opus 5.5 unless you choose Baller.
 
 Two settings decide what the panel draws:
 
-- **Everyday pack**: drawn all year (crabs by default). Or **shuffle**: a random non-holiday pack each session, never the same one twice running.
+- **Everyday pack**: drawn all year (clawd by default). Or **shuffle**: a random non-holiday pack each session, never the same one twice running.
 - **Seasons** (on by default): a holiday pack replaces the everyday pack in its dates, in local time. A holiday pack that is not installed leaves the everyday pack showing.
 
 If you pick a pack during a holiday, it shows now, and that holiday is skipped until it ends.
 
 The pack is checked at session start and when a new `/relay` plan starts.
 
-Set the starting values with the `pack` option (`crabs`, `cats`, `dogs` or `shuffle`) and the `seasons` option (`on` or `off`), in `/config` or in `~/.claude/settings.json`:
+Set the starting values with the `pack` option (`clawd`, `cats`, `dogs` or `shuffle`) and the `seasons` option (`on` or `off`), in `/config` or in `~/.claude/settings.json`:
 
 ```json
 { "pluginConfigs": { "relay-panel": { "options": { "pack": "cats", "seasons": "on" } } } }

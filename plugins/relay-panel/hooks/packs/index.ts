@@ -1,16 +1,16 @@
 // Pack registry. Adding a pack = one file in this folder + one entry in PACKS + its tests.
 
 import { cats } from './cats'
-import { crabs } from './crabs'
+import { clawd } from './clawd'
 import { dogs } from './dogs'
 import { turkeys } from './turkeys'
 import { christmas } from './christmas'
 import type { Pack } from './types'
 
-export const PACKS: readonly Pack[] = [cats, crabs, dogs, turkeys, christmas]
+export const PACKS: readonly Pack[] = [cats, clawd, dogs, turkeys, christmas]
 
 // The off-season pack (packs/seasons.ts OFF_SEASON) and the fallback for any unknown id.
-export const DEFAULT_PACK = 'crabs'
+export const DEFAULT_PACK = 'clawd'
 
 export const packIds = (): string[] => PACKS.map(p => p.id)
 

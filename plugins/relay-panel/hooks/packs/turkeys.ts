@@ -243,14 +243,16 @@ const INK = '#262A32' // spectacles, eye patch
 
 const r = (ch: string, n: number) => ch.repeat(n)
 
+// The tier colour ('A' in a map value) tints each costume's main piece, as well as the ribbon.
 const COSTUMES: Record<string, Costume> = {
-  // headphones + laptop; the screen flickers
-  developer: {
+  // builder: headphones + laptop; the screen flickers
+  builder: {
     hold: true,
     wing: WING_DOWN,
     layers: [
       {
         // band over the crown, down the back of the head to a round cup
+        map: { K: 'A' },
         segs: [[22, 1, 'kkkkk'], [21, 2, 'k'], [27, 2, 'k'], [21, 3, 'kK'], [21, 4, 'kK'], [21, 5, 'kK']],
       },
       {
@@ -265,29 +267,10 @@ const COSTUMES: Record<string, Costume> = {
       },
       { g: 'cur', ground: true, map: { b: '#EAF2FF' }, segs: [[30, 18, 'b'], [29, 21, 'b']] },
     ],
-    anim: '.p-turkeys .t-developer.run .cur{animation:turkeys-blink 1s steps(1) infinite}',
+    anim: '.p-turkeys .t-builder.run .cur{animation:turkeys-blink 1s steps(1) infinite}',
   },
-  // beret + brush, with a small pie for a palette; the brush dabs
-  designer: {
-    hold: true,
-    layers: [
-      {
-        // a flat disc tipped over the crown, its band around the top of the head
-        map: { r: '#C04257', R: '#8E2332' },
-        segs: [[23, -1, 'r'], [21, 0, r('r', 7)], [20, 1, r('r', 9)], [21, 2, r('R', 7)]],
-      },
-      {
-        g: 'gd',
-        ground: true,
-        map: { p: '#C98A3E', f: '#B8302A', d: '#8A8F99' },
-        segs: [[25, 23, 'pppp'], [24, 24, 'pffffp'], [24, 25, 'dddddd']],
-      },
-      { g: 'it', map: { r: '#D0453F' }, segs: [[28, 17, 'o'], [29, 16, 'o'], [30, 15, 'rr'], [30, 14, 'rr']] },
-    ],
-    anim: '.p-turkeys .t-designer.run .it{animation:turkeys-dab .5s steps(1) infinite}',
-  },
-  // spectacles + a recipe card on a clipboard; the items tick off one by one
-  planner: {
+  // tester: spectacles + a recipe card on a clipboard; the boxes check in one by one
+  tester: {
     hold: true,
     layers: [
       {
@@ -297,71 +280,76 @@ const COSTUMES: Record<string, Costume> = {
       },
       {
         g: 'it',
-        map: { m: '#9AA0A8', P: '#F6F1E4', l: '#C4BEB0', r: '#C0392B' },
+        // a narrow board gripped at its left edge; a steel clip, a red recipe header, then
+        // three list lines, each with a box that a check fills in
+        map: { m: '#9AA0A8', P: '#F6F1E4', l: '#A9A39A', x: '#D6D0C4', r: '#C0392B', o: 'A' },
         segs: [
-          [28, 15, 'mm'],
-          [26, 16, 'oooooo'],
-          [26, 17, 'orrrro'], [26, 18, 'oPPllo'], [26, 19, 'oPPPPo'], [26, 20, 'oPPllo'],
-          [26, 21, 'oPPPPo'], [26, 22, 'oPPllo'], [26, 23, 'oPPPPo'], [26, 24, 'oooooo'],
+          [28, 15, 'mmm'],
+          [27, 16, 'ooooo'],
+          [27, 17, 'orrro'], [27, 18, 'oxllo'], [27, 19, 'oPPPo'], [27, 20, 'oxllo'],
+          [27, 21, 'oPPPo'], [27, 22, 'oxllo'], [27, 23, 'oPPPo'], [27, 24, 'ooooo'],
         ],
       },
-      { g: 'c1', map: { v: '#3B9C5F' }, segs: [[27, 18, 'vv']] },
-      { g: 'c2', map: { v: '#3B9C5F' }, segs: [[27, 20, 'vv']] },
-      { g: 'c3', map: { v: '#3B9C5F' }, segs: [[27, 22, 'vv']] },
+      { g: 'c1', map: { v: '#2E8B57' }, segs: [[28, 18, 'v']] },
+      { g: 'c2', map: { v: '#2E8B57' }, segs: [[28, 20, 'v']] },
+      { g: 'c3', map: { v: '#2E8B57' }, segs: [[28, 22, 'v']] },
     ],
-    anim: `.p-turkeys .t-planner.run .c1{animation:turkeys-tick 1.5s steps(1) infinite}
-.p-turkeys .t-planner.run .c2{animation:turkeys-tick 1.5s steps(1) infinite -.5s}
-.p-turkeys .t-planner.run .c3{animation:turkeys-tick 1.5s steps(1) infinite -1s}`,
+    // one pass a second: blank, then each box checks in turn
+    anim: `.p-turkeys .t-tester.run .c1{animation:turkeys-t1 1s steps(1) infinite}
+.p-turkeys .t-tester.run .c2{animation:turkeys-t2 1s steps(1) infinite}
+.p-turkeys .t-tester.run .c3{animation:turkeys-t3 1s steps(1) infinite}`,
   },
-  // flat cap + blueprint tube; the tube sways
-  architect: {
+  // fixer: flat cap + wrench; the wrench works up and down
+  fixer: {
     hold: true,
     layers: [
       {
         // the brim juts past the brow above the beak
-        map: { h: '#6E6253', H: '#A3957F', d: '#4E4539' },
+        map: { h: 'A', H: 'A', d: '#4E4539' },
         segs: [[22, 0, r('H', 6)], [21, 1, r('h', 8)], [21, 2, r('h', 7) + 'ddd']],
       },
       {
+        // an open-ended wrench held upright in the wing tip, jaw up
         g: 'it',
-        map: { b: '#3E78CF', B: '#BBD2F2' },
-        segs: [
-          [28, 16, 'BBB'],
-          ...[17, 18, 20, 21, 23, 24].map(y => [28, y, 'bbb'] as Seg),
-          [28, 19, 'BBB'], [28, 22, 'BBB'], [28, 25, 'BBB'],
-        ],
+        map: { s: '#8C96A3', S: '#5F6874' },
+        segs: [[28, 16, 's..s'], [28, 17, 's..s'], [28, 18, 'ssss'], [29, 19, 'sS'], [29, 20, 'sS'], [29, 21, 'sS'], [29, 22, 'sS'], [29, 23, 'sS'], [29, 24, 'sS']],
       },
     ],
-    anim: '.p-turkeys .t-architect.run .it{transform-origin:50% 100%;animation:turkeys-sway 1.6s ease-in-out infinite}',
+    anim: '.p-turkeys .t-fixer.run .it{animation:turkeys-st .5s steps(1) infinite}',
   },
-  // black pilgrim capotain with a gold buckle + a drumstick for a baton; it conducts
-  orchestrator: {
+  // conductor: pilgrim capotain + a drumstick for a baton; the drumstick beats between two poses
+  conductor: {
     hold: true,
     layers: [
       {
-        // tall tapered crown, a lighter band with the buckle at the front, a wide brim
-        segs: [[22, -2, 'kkkkk'], [22, -1, 'kKkkk'], [21, 0, 'kKkkkkk'], [21, 1, 'KKKKKyy'], [20, 2, r('k', 9)]],
+        // tall tapered crown, a tier-coloured band with the buckle at the front, a wide brim
+        segs: [[22, -2, 'kkkkk'], [22, -1, 'kKkkk'], [21, 0, 'kKkkkkk'], [21, 1, 'AAAAAyy'], [20, 2, r('k', 9)]],
       },
-      { g: 'it', map: { d: '#B5732F', D: '#D99A55' }, segs: [[28, 16, 'W'], [29, 15, 'W'], [30, 14, 'dd'], [29, 13, 'dDd']] },
+      // the drumstick beats between raised and level; the bone end stays in the wing tip
+      { map: { W: '#E0CFA8' }, segs: [[28, 17, 'W'], [28, 18, 'W']] },
+      { g: 'pa', map: { W: '#E0CFA8', d: '#B5732F', D: '#D99A55' }, segs: [[29, 16, 'W'], [30, 15, 'W'], [30, 12, 'dd'], [29, 13, 'dDd'], [29, 14, 'ddd']] },
+      { g: 'pb', map: { W: '#E0CFA8', d: '#B5732F', D: '#D99A55' }, segs: [[29, 17, 'W'], [30, 16, 'dd'], [30, 17, 'DD'], [30, 18, 'dd']] },
     ],
-    anim: '.p-turkeys .t-orchestrator.run .it{transform-origin:0% 100%;animation:turkeys-conduct .5s ease-in-out infinite}',
+    anim: '',
   },
-  // bandana + eye patch + cutlass; the cutlass lunges
-  explore: {
+  // scout: bandana + eye patch + spyglass
+  scout: {
     hold: true,
     layers: [
       {
         // tied over the crown, the knot and its tails trailing behind the head
-        map: { r: '#C7563D', W: '#F6F2EA' },
+        map: { r: 'A', W: '#F6F2EA' },
         segs: [[21, 2, r('r', 7)], [21, 3, 'rrrWrrr'], [19, 3, 'rr'], [18, 4, 'rr']],
       },
       { map: { k: INK }, segs: [[22, 4, 'kkk'], [25, 4, 'kk'], [25, 5, 'kk']] },
-      { g: 'it', map: { s: '#D3D6DB' }, segs: [[28, 17, 'y'], [28, 18, 'y'], [28, 19, 'y'], [29, 16, 'ks'], [29, 15, 'ks'], [30, 14, 'ks'], [31, 13, 's']] },
+      // a brass spyglass held level, the wide end out front; the lens glints
+      { map: { B: '#BBD2F2' }, segs: [[30, 15, 'kk'], [29, 16, 'kyy'], [28, 17, 'yyyB'], [28, 18, 'oooB'], [29, 19, 'koo'], [30, 20, 'kk']] },
+      { g: 'gl', map: { G: '#FFFFFF' }, segs: [[31, 17, 'G']] },
     ],
-    anim: '.p-turkeys .t-explore.run .it{transform-origin:0% 100%;animation:turkeys-lunge .5s ease-in-out infinite}',
+    anim: '.p-turkeys .t-scout.run .gl{animation:turkeys-blink 1s steps(1) infinite}',
   },
-  // no costume; the ribbon carries the colour
-  other: { layers: [], anim: '' },
+  // plain: no costume; the ribbon carries the colour
+  plain: { layers: [], anim: '' },
 }
 
 export const COSTUME_NAMES: readonly string[] = Object.keys(COSTUMES)
@@ -372,7 +360,11 @@ type Cell = { c: string; g: string; key: string; o: string }
 // Small features drawn as they are, never turned into outline: caruncles, beak, eye, legs.
 const KEEP = 'ryYEL'
 
-const svgFor = (name: string, breed: Breed, accent: string): string => {
+// The flare: the same fan one pixel higher, drawn and outlined as its own pose.
+const TAIL_FLARE: Seg[] = TAIL.map(([x, y, px]): Seg => [x, y - 1, px])
+
+// `fan` picks the fan's pose; `fanOnly` returns just that pose's fan rects.
+const svgFor = (name: string, breed: Breed, accent: string, fan: Seg[] = TAIL, fanOnly = false): string => {
   const costume = COSTUMES[name]
   const { body, tail } = breed
   const grid: (Cell | null)[][] = Array.from({ length: TURKEY_H }, () => Array(TURKEY_W).fill(null))
@@ -396,7 +388,7 @@ const svgFor = (name: string, breed: Breed, accent: string): string => {
         set?.add(`${x + i},${y + DY}`)
       })
   }
-  fill(TAIL, 'tl')
+  fill(fan, 'tl')
   fill(BODY, 'bd')
   if (breed.marks) fill(breed.marks, 'bd')
   if (!costume.hold) fill(WING_FOLDED, 'bd')
@@ -435,7 +427,8 @@ const svgFor = (name: string, breed: Breed, accent: string): string => {
         const gx = x + i
         const gy = y + DY
         if (ch === '.' || !inside(gx, gy)) return
-        const c = map[ch] ?? (ch === 'A' ? accent : ch === 'g' ? '#E3B23C' : PROP[ch])
+        const m = map[ch] === 'A' ? accent : map[ch]
+        const c = m ?? (ch === 'A' ? accent : ch === 'g' ? '#E3B23C' : PROP[ch])
         if (c) grid[gy][gx] = { c, g: group, key: ch, o: body.o }
       })
   }
@@ -474,34 +467,39 @@ const svgFor = (name: string, breed: Breed, accent: string): string => {
       x = end
     }
   })
+  if (fanOnly) return groups.get('tl')?.join('') ?? ''
   const g = (k: string) => (groups.has(k) ? `<g class="${k}">${groups.get(k)?.join('')}</g>` : '')
+  const flare = `<g class="tw">${svgFor(name, breed, accent, TAIL_FLARE, true)}</g>`
   const ground = new Set(costume.layers.filter(l => l.ground).map(l => l.g ?? 'bd'))
   const props = (onGround: boolean) =>
     [...groups.keys()].filter(k => !['bd', 'la', 'lb', 'tl'].includes(k) && ground.has(k) === onGround).map(g).join('')
   // The body rects sit directly in the bobbing group, so they bob once, with the snood
   // and the held props inside it; ground props and the legs stay on the floor.
-  return `${g('tl')}<g class="bd">${groups.get('bd')?.join('') ?? ''}${props(false)}</g>${props(true)}${g('la')}${g('lb')}`
+  return `<g class="bd">${g('tl')}${flare}${groups.get('bd')?.join('') ?? ''}${props(false)}</g>${props(true)}${g('la')}${g('lb')}`
 }
 
-// Legs step and the body bobs like the cats; the fan puffs from its pivot at the rump and
-// the snood wobbles from its root on the forehead.
+// Legs step and the body bobs like the cats. The fan rides the bob and swaps to its flared
+// pose; the snood sways a pixel.
 const TURKEY_CSS = `<style>
 .p-turkeys .run g{transform-box:fill-box}
 .p-turkeys .run .la{animation:turkeys-st .5s steps(1) infinite}
 .p-turkeys .run .lb{animation:turkeys-st .5s steps(1) infinite -.25s}
 .p-turkeys .run .bd{animation:turkeys-bob .5s steps(1) infinite -.125s}
-.p-turkeys .run .tl{transform-origin:60% 65%;animation:turkeys-puff 1s ease-in-out infinite}
-.p-turkeys .run .sn{transform-origin:0% 0%;animation:turkeys-wobble .5s ease-in-out infinite}
+.p-turkeys .pb,.p-turkeys .tw{opacity:0}
+.p-turkeys .run .pa{animation:turkeys-off .5s steps(1) infinite}
+.p-turkeys .run .pb{animation:turkeys-on .5s steps(1) infinite}
+.p-turkeys .run .tl{animation:turkeys-off 1s steps(1) infinite}
+.p-turkeys .run .tw{animation:turkeys-on 1s steps(1) infinite}
+.p-turkeys .run .sn{animation:turkeys-wobble .5s steps(1) infinite}
 @keyframes turkeys-st{50%{transform:translateY(-1px)}}
 @keyframes turkeys-bob{50%{transform:translateY(1px)}}
-@keyframes turkeys-puff{50%{transform:scale(1.1)}}
-@keyframes turkeys-wobble{50%{transform:rotate(18deg)}}
+@keyframes turkeys-off{50%{opacity:0}}
+@keyframes turkeys-on{50%{opacity:1}}
+@keyframes turkeys-t1{0%{opacity:0}25%{opacity:1}}
+@keyframes turkeys-t2{0%{opacity:0}50%{opacity:1}}
+@keyframes turkeys-t3{0%{opacity:0}75%{opacity:1}}
+@keyframes turkeys-wobble{50%{transform:translateX(-1px)}}
 @keyframes turkeys-blink{50%{opacity:.25}}
-@keyframes turkeys-dab{50%{transform:translate(1px,-1px)}}
-@keyframes turkeys-tick{0%{opacity:0}33%{opacity:1}}
-@keyframes turkeys-sway{50%{transform:rotate(6deg)}}
-@keyframes turkeys-conduct{50%{transform:rotate(-24deg)}}
-@keyframes turkeys-lunge{50%{transform:translateX(1px) rotate(-8deg)}}
 ${Object.values(COSTUMES).map(c => c.anim).filter(Boolean).join('\n')}
 @media (prefers-reduced-motion: reduce){.p-turkeys .run,.p-turkeys .run g{animation:none!important}}
 </style>`
@@ -522,7 +520,7 @@ const inner = (costume: string, breed: string, accent: string): string => {
 // `mirror` flips the bird inside its own box (x .. x + TURKEY_W * scale) so it faces left.
 // The turkeys dress by role; the tier only reaches them through the accent colour.
 const draw = (x: number, y: number, who: { role: Role; tier: Tier }, o: DrawOptions): string => {
-  const name = COSTUMES[who.role] ? who.role : 'other'
+  const name = COSTUMES[who.role] ? who.role : 'plain'
   const breed = BREED_TABLE[o.variant] ? o.variant : BREEDS[0]
   const scale = o.scale ?? 1
   const place = o.mirror ? `translate(${x + TURKEY_W * scale},${y}) scale(${-scale},${scale})` : `translate(${x},${y}) scale(${scale})`

@@ -1,10 +1,11 @@
 // A pixel Christmas cast in profile, 32x28 grid units, drawn as SVG rects. The character is
-// chosen by role, so a crew reads as a scene: Santa conducts (orchestrator), Mrs Claus holds
-// the naughty-or-nice list (planner), elves carry the blueprint tube, laptop and gift
-// (architect, developer, designer), the flying sleigh explores, and the reindeer is everyone
-// else. Same canvas, facing, generated outline and animation rules as cats.ts; the tier
-// accent sits in one "collar" spot per character: Santa's belt, Mrs Claus's ribbon, the elf's
-// collar, the ribbon on the sleigh's sack, the reindeer's harness strap.
+// chosen by role, so a crew reads as a scene: Santa conducts (conductor), a gingerbread
+// figure swings a peppermint mallet (builder), a nutcracker peers through a magnifying glass
+// (fixer), Mrs Claus ticks off her clipboard (tester), an elf lights the way with a lantern
+// (scout), and the reindeer is everyone else (plain). Same canvas, facing, generated outline
+// and animation rules as cats.ts. The tier accent tints one costume piece per character:
+// Santa's hat band and belt, the gingerbread hard hat, the nutcracker's shako, Mrs Claus's
+// shawl, the elf's cap, the reindeer's harness strap.
 
 import { type DrawOptions, type Pack, type Role, ROLES, type Tier } from './types'
 
@@ -14,7 +15,8 @@ const DY = 2 // every figure sits two rows down so hats and antlers fit above it
 
 // --- variants -------------------------------------------------------------------------------
 // The six variants are the reindeer coats. The other characters read them as one detail: the
-// elves' tunic and cap, the sleigh's paint. Santa and Mrs Claus ignore them.
+// gingerbread's dough and gumdrops, the nutcracker's jacket, the elf's tunic and tights.
+// Santa and Mrs Claus ignore them.
 type Tones = { o: string; s: string; b: string; h: string }
 type Coat = Tones & { m: string; n: string; e: string; i: string }
 
@@ -43,7 +45,7 @@ export const variantOf = (key: string): string => {
   return VARIANTS[h % VARIANTS.length]
 }
 
-// Elf tunics and caps, and sleigh paint, by variant index.
+// Cloth by variant index: the elf's tunic (tights a shade darker) and the nutcracker's jacket.
 type Pair = { c: string; o: string }
 const GREEN: Pair = { c: '#3B9C5F', o: '#1C5E3A' }
 const RED: Pair = { c: '#C8102E', o: '#7A0C1E' }
@@ -51,16 +53,37 @@ const GOLD: Pair = { c: '#D9A520', o: '#8A6412' }
 const TEAL: Pair = { c: '#2A9D8F', o: '#176B62' }
 const PLUM: Pair = { c: '#8E3A7C', o: '#5E2352' }
 const BLUE: Pair = { c: '#3E78CF', o: '#24498A' }
-const TUNICS: [tunic: Pair, cap: Pair][] = [[GREEN, RED], [RED, GREEN], [GOLD, GREEN], [TEAL, RED], [PLUM, GREEN], [BLUE, RED]]
-const PAINTS: Pair[] = [RED, GREEN, GOLD]
+const TUNICS: Pair[] = [GREEN, RED, GOLD, TEAL, PLUM, BLUE]
+const JACKETS: Pair[] = [RED, BLUE, GREEN, TEAL, PLUM, GOLD]
+const cloth = (list: Pair[], variant: string): Pair => list[VARIANTS.indexOf(variant)] ?? list[0]
+
+// Gingerbread dough and gumdrop buttons by variant; rudolph gets a red gumdrop nose.
+type Dough = { d: string; s: string; o: string; g: string; i: string; n?: string }
+const DOUGH: Record<string, Dough> = {
+  brown: { d: '#B8733A', s: '#9A5E2C', o: '#5E3214', g: '#D0453F', i: '#FFFFFF' },
+  'dark-brown': { d: '#7E4A22', s: '#683B19', o: '#33190A', g: '#3B9C5F', i: '#FFFFFF' },
+  tan: { d: '#D9A066', s: '#C08550', o: '#7A4E22', g: '#D0453F', i: '#FFFFFF' },
+  grey: { d: '#B8733A', s: '#9A5E2C', o: '#5E3214', g: '#3E78CF', i: '#BBD2F2' },
+  white: { d: '#EBD3A8', s: '#D6B886', o: '#9A7B52', g: '#D9A520', i: '#FFFFFF' },
+  rudolph: { d: '#B8733A', s: '#9A5E2C', o: '#5E3214', g: '#3B9C5F', i: '#FFFFFF', n: '#FF2F2A' },
+}
 
 // --- shared palette -------------------------------------------------------------------------
 // An ink is a fill colour with the outline tone it turns into where it meets empty space.
-// No `o`: drawn flat and treated as empty by its neighbours (antlers, sparkles). `o` equal to
-// `c`: solid but never darkened (hooves, buckles, runners). `g` moves the pixel to its own
-// group (the reindeer's nose glows, sparkles twinkle).
+// No `o`: drawn flat and treated as empty by its neighbours (antlers). `o` equal to `c`:
+// solid but never darkened (hooves, buckles, boots). `g` moves the pixel to its own group
+// (the reindeer's nose glows).
 type Ink = { c: string; o?: string; g?: string }
 const flat = (c: string, g?: string): Ink => (g ? { c, o: c, g } : { c, o: c })
+
+// The accent as a costume piece: its own colour, outlined in a darker shade of itself.
+const darker = (hex: string): string => {
+  const n = Number.parseInt(hex.slice(1, 7), 16)
+  if (Number.isNaN(n)) return hex
+  const ch = (v: number) => Math.round(v * 0.55).toString(16).padStart(2, '0')
+  return `#${ch(n >> 16)}${ch((n >> 8) & 255)}${ch(n & 255)}`
+}
+const tinted = (accent: string): Ink => ({ c: accent, o: darker(accent) })
 
 const SKIN: Ink = { c: '#F2C9A5', o: '#9A6040' }
 const SNOW: Ink = { c: '#F6F2EA', o: '#9A958D' } // trim, beard, apron: grey outline so it reads on light rows
@@ -71,13 +94,10 @@ const NOSE_ROSY: Ink = { c: '#E58A82', o: '#B8584F' }
 const BOOT: Ink = flat('#23201F')
 const BRASS: Ink = flat('#E3B23C')
 const HAIR: Ink = { c: '#CBC6BE', o: '#777269' }
-const SPARK: Ink = { c: '#F2C230' }
 
-// Prop colours for layers put on top after the outline; 'ink' resolves per figure.
+// Prop colours for layers put on top after the outline.
 const PROP: Record<string, string> = {
   k: '#3D4752', // dark prop body
-  K: '#5C6875', // its lighter face
-  w: '#E4E8EC', // light edge
   W: '#F6F2EA', // paper, snow
   l: '#A9A49A', // grey edge of white things
   y: '#E3B23C', // brass
@@ -99,12 +119,15 @@ type Layer = { segs: Seg[]; g?: string; map?: Record<string, string> }
 type Figure = {
   ink: Record<string, Ink>
   parts: Part[] // filled in order, later ones over earlier, then outlined
-  layers: Layer[] // put on top after the outline: collars, spectacles, props
-  late?: Part[] // filled after the layers and outlined where they meet anything that is not figure
-  outer?: string[] // groups emitted beside the body instead of inside it (the sleigh's sparkle trail)
+  layers: Layer[] // put on top after the outline: spectacles, props
+  late?: Part[] // filled after the layers and outlined where they meet anything that is not figure (the hand over a prop)
+  tail?: Seg[] // a second tail pose, swapped in by steps so the tail never leaves the rump
 }
 
-// ---- reindeer (other) -----------------------------------------------------------------------
+// The shared prop anchor: every lifted front hand is this 2x2 block, drawn over the prop's grip.
+const HAND: Seg[] = [[24, 15, 'HH'], [24, 16, 'HH']]
+
+// ---- reindeer (plain) -----------------------------------------------------------------------
 // Deep deer body on slim legs with dark hooves, short upturned tail, thick neck with a pale
 // mane, long wedge muzzle, one leaf ear and a pair of branched antlers in pale bone. Letters:
 // b s h coat, m mane, n nose, i inner ear, E iris, G glint, a near antler, f far antler, k hoof.
@@ -123,6 +146,8 @@ const ANTLER_FAR: Seg[] = pic(-2, [
   '...................fff',
 ])
 const DEER_TAIL: Seg[] = pic(10, ['.bb', '.bmb', '..bmbb'])
+// the flick: the tip swings back and down, still rooted on the rump at y12
+const DEER_TAIL_FLICK: Seg[] = pic(10, ['b', 'bmb', '.bmbbb'])
 const DEER_BODY: Seg[] = pic(3, [
   '................bb..bbbbbbb',
   '................bibbbbbbEGbbb',
@@ -162,18 +187,19 @@ const reindeerFigure = (coat: Coat, accent: string): Figure => ({
     { g: 'lb', segs: deerLeg(8, 's') }, { g: 'la', segs: deerLeg(16, 's') }, { g: 'la', segs: deerLeg(5, 'b') }, { g: 'lb', segs: deerLeg(19, 'b') },
   ],
   layers: [{ segs: STRAP, map: { A: accent } }, { g: 'bl', segs: BELL, map: { j: '#F2C94C', J: '#B8860B' } }],
+  tail: DEER_TAIL_FLICK,
 })
 
-// ---- Santa (orchestrator) -------------------------------------------------------------------
-// Hat flopping back with a pompom, a face that is mostly beard, round red suit, belt in the
-// accent with a brass buckle, white hem and black boots. Letters: r suit, q sleeve, W snow,
-// p skin, P eye, n nose, A belt, y buckle, k boot.
+// ---- Santa (conductor) ----------------------------------------------------------------------
+// Hat flopping back with a pompom over a band in the accent, a face that is mostly beard,
+// round red suit, belt in the accent with a brass buckle, white hem and black boots. Letters:
+// r suit, q sleeve, W snow, p skin, P eye, n nose, A hat band and belt, y buckle, k boot.
 const SANTA: Seg[] = pic(-2, [
   '.......WWW',
   '........rrrrr',
   '.........rrrrrrr',
   '..........rrrrrrrrr',
-  '..........WWWWWWWWWW',
+  '..........AAAAAAAAAA',
   '..........pppppppppp',
   '..........ppppppppPp',
   '..........pppppppppnn',
@@ -196,20 +222,140 @@ const SANTA: Seg[] = pic(-2, [
 // The near arm reaches forward in a darker sleeve to a white mitten that grips the baton.
 const SANTA_ARM: Seg[] = [[20, 8, 'qqq'], [21, 9, 'qqq'], [22, 10, 'qqq'], [23, 11, 'qqq'], [23, 12, 'WWW'], [24, 13, 'WWW'], [24, 14, 'WW']]
 const santaFigure = (accent: string): Figure => ({
-  ink: { r: SUIT, q: SLEEVE, W: SNOW, p: SKIN, P: EYE, n: NOSE_ROSY, k: BOOT, y: BRASS, A: flat(accent) },
+  ink: { r: SUIT, q: SLEEVE, W: SNOW, p: SKIN, P: EYE, n: NOSE_ROSY, k: BOOT, y: BRASS, A: tinted(accent) },
   parts: [
     { g: 'bd', segs: SANTA },
     { g: 'la', segs: [[9, 21, 'rrrr'], [9, 22, 'rrrr'], [9, 23, 'kkkk'], [9, 24, 'kkkk'], [9, 25, 'kkkkk']] },
     { g: 'lb', segs: [[16, 21, 'rrrrr'], [16, 22, 'rrrrr'], [16, 23, 'kkkkk'], [16, 24, 'kkkkkk'], [16, 25, 'kkkkkk']] },
     { g: 'bd', segs: SANTA_ARM },
   ],
-  // candy-cane baton
-  layers: [{ g: 'it', segs: [[27, 13, 'RW'], [28, 12, 'Rr'], [29, 11, 'RW'], [30, 10, 'r']] }],
+  // candy-cane baton: raised (it), then a beat level (iu); the two poses swap by steps
+  layers: [
+    { g: 'it', segs: [[27, 13, 'RW'], [28, 12, 'Rr'], [29, 11, 'RW'], [30, 10, 'r']] },
+    { g: 'iu', segs: [[27, 13, 'RWRWr']] },
+  ],
 })
 
-// ---- Mrs Claus (planner) --------------------------------------------------------------------
-// Grey bun, spectacles, white shawl with the accent ribbon, red dress to the ground with a
-// white apron down the front, shoes peeking out. Letters as Santa plus g hair.
+// ---- gingerbread (builder) ------------------------------------------------------------------
+// A cut-out gingerbread figure turned to the right: round head, arms out, stubby legs, icing
+// smile and cuffs, gumdrop buttons, a hard hat in the accent. Letters: d dough, s far leg,
+// A hard hat, E currant eye, n nose (a red gumdrop on rudolph), H hand.
+const GINGER: Seg[] = pic(4, [
+  '...........ddddddddd',
+  '..........ddddddddddd',
+  '..........ddddddddEdd',
+  '..........dddddddddddn',
+  '..........ddddddddddd',
+  '...........ddddddddd',
+  '............ddddddd',
+  '..........ddddddddddd',
+  '........ddddddddddddd',
+  '......ddddddddddddddd',
+  '....dddddddddddddddd',
+  '....ddddd.dddddddddd',
+  '....ddd...dddddddddd',
+  '..........dddddddddd',
+  '..........dddddddddd',
+  '..........dddddddddd',
+])
+const HARD_HAT: Seg[] = [[13, -1, 'AAAAA'], [11, 0, 'AAAAAAAAA'], [10, 1, 'AAAAAAAAAAA'], [10, 2, 'AAAAAAAAAAA'], [8, 3, r('A', 15)]]
+const gingerbreadFigure = (variant: string, accent: string): Figure => {
+  const d = DOUGH[variant] ?? DOUGH.brown
+  return {
+    ink: {
+      d: { c: d.d, o: d.o }, s: { c: d.s, o: d.o }, A: tinted(accent), E: flat('#2A1A10'),
+      n: { c: d.n ?? d.d, o: d.o }, H: { c: d.d, o: d.o },
+    },
+    parts: [
+      { g: 'bd', segs: GINGER },
+      { g: 'bd', segs: HARD_HAT },
+      { g: 'la', segs: [[10, 20, 'ssss'], [10, 21, 'ssss'], [10, 22, 'ssss'], [10, 23, 'ssss'], [9, 24, 'sssss'], [10, 25, 'ssss']] },
+      { g: 'lb', segs: [[15, 20, 'dddd'], [15, 21, 'dddd'], [15, 22, 'dddd'], [15, 23, 'dddd'], [15, 24, 'ddddd'], [15, 25, 'dddd']] },
+      { g: 'bd', segs: [[19, 13, 'dd'], [20, 14, 'ddd'], [21, 15, 'ddd'], [22, 16, 'dd']] },
+    ],
+    layers: [
+      // icing: smile, hat-side swirl, wrist and ankle cuffs; gumdrop buttons
+      { map: { W: d.i }, segs: [[17, 8, 'WW'], [19, 7, 'W'], [6, 14, 'W'], [6, 15, 'W'], [11, 23, 'WW'], [16, 23, 'WW'], [12, 4, 'W']] },
+      { map: { g: d.g }, segs: [[17, 13, 'g'], [17, 15, 'g'], [17, 17, 'g']] },
+      // peppermint mallet: a wooden handle into a squared, outlined head with candy stripes.
+      // Raised upright (it), then struck forward with the head turned on its side (iu).
+      {
+        g: 'it',
+        map: { O: '#7A0C1E', R: '#C8102E', W: '#F6F2EA', o: '#8A5A2B' },
+        segs: [[23, 8, 'OOOOOOO'], [23, 9, 'ORWRWRO'], [23, 10, 'ORWRWRO'], [23, 11, 'OOOOOOO'], [26, 12, 'o'], [26, 13, 'o'], [26, 14, 'o'], [26, 15, 'o']],
+      },
+      {
+        g: 'iu',
+        map: { O: '#7A0C1E', R: '#C8102E', W: '#F6F2EA', o: '#8A5A2B' },
+        segs: [[26, 15, 'oo'], [28, 12, 'OOOO'], [28, 13, 'ORRO'], [28, 14, 'OWWO'], [28, 15, 'ORRO'], [28, 16, 'OWWO'], [28, 17, 'ORRO'], [28, 18, 'OOOO']],
+      },
+    ],
+    late: [{ g: 'bd', segs: HAND }],
+  }
+}
+
+// ---- nutcracker (fixer) ---------------------------------------------------------------------
+// A wooden nutcracker soldier: tall shako in the accent with a brass badge, dark peak, white
+// hair and moustache, hinged jaw, jacket with epaulette and brass buttons, black belt, white
+// trousers and black boots. Letters: A shako, y brass, k peak and belt, h W white, p skin,
+// P eye, n nose, t jacket, u sleeve, B boot, H glove.
+const NUTCRACKER: Seg[] = pic(-2, [
+  '...........AAAAAAAA',
+  '...........AAAAAAAA',
+  '...........AAAAAyAA',
+  '...........AAAAAAAA',
+  '...........AAAAAAAA',
+  '..........kkkkkkkkkkk',
+  '...........hhppppppp',
+  '...........hhppppPpp',
+  '...........hhppppppnn',
+  '...........hhWWWWWWWW',
+  '...........hhWkkkkkkk',
+  '...........hhWWWWWWW',
+  '............WWWWWWW',
+  '..........ttttttttttt',
+  '.........yytttttttyttt',
+  '.........yyttttttttttt',
+  '..........ttttttttyttt',
+  '..........ttttttttttt',
+  '..........ttttttttyttt',
+  '..........ttttttttttt',
+  '..........kkkkkkkyykk',
+  '..........WWWWWWWWWWW',
+  '..........WWWWWWWWWWW',
+])
+const MAGNIFIER_MAP = { k: '#B8860B', L: '#CDEBF7', G: '#FFFFFF', o: '#5A3A1E' }
+// brass ring with a pale lens and a glint, handle down into the glove
+const lens = (dy: number): Seg[] => [
+  [26, 6 + dy, 'kkkk'], [25, 7 + dy, 'kLLLLk'], [25, 8 + dy, 'kLGLLk'], [25, 9 + dy, 'kLLLLk'], [25, 10 + dy, 'kLLLLk'], [26, 11 + dy, 'kkkk'],
+]
+const nutcrackerFigure = (variant: string, accent: string): Figure => {
+  const jacket = cloth(JACKETS, variant)
+  return {
+    ink: {
+      A: tinted(accent), y: BRASS, k: BOOT, h: SNOW, W: SNOW, p: SKIN, P: EYE, n: NOSE_ROSY,
+      t: { c: jacket.c, o: jacket.o }, u: { c: jacket.o, o: jacket.o }, B: BOOT, H: SNOW,
+    },
+    parts: [
+      { g: 'bd', segs: NUTCRACKER },
+      // straight soldier's legs as wide as the hips, split by a one-pixel gap, into tall boots
+      { g: 'la', segs: [[10, 21, 'WWWWW'], [10, 22, 'WWWWW'], [10, 23, 'BBBBB'], [10, 24, 'BBBBB'], [10, 25, 'BBBBBB']] },
+      { g: 'lb', segs: [[16, 21, 'WWWWW'], [16, 22, 'WWWWW'], [16, 23, 'BBBBB'], [16, 24, 'BBBBB'], [16, 25, 'BBBBBB']] },
+      { g: 'bd', segs: [[19, 12, 'uu'], [20, 13, 'uuu'], [21, 14, 'uuu'], [22, 15, 'uu']] },
+    ],
+    // the glass scans: level (it), then lifted a pixel on a longer handle (iu)
+    layers: [
+      { g: 'it', map: MAGNIFIER_MAP, segs: [...lens(0), [26, 12, 'o'], [26, 13, 'o'], [25, 14, 'o']] },
+      { g: 'iu', map: MAGNIFIER_MAP, segs: [...lens(-1), [26, 11, 'o'], [26, 12, 'o'], [26, 13, 'o'], [25, 14, 'o']] },
+    ],
+    late: [{ g: 'bd', segs: HAND }],
+  }
+}
+
+// ---- Mrs Claus (tester) ---------------------------------------------------------------------
+// Grey bun, spectacles, a shawl in the accent, red dress to the ground with a white apron down
+// the front, shoes peeking out, a clipboard held up at the shared hand. Letters as Santa plus
+// g hair, A shawl, H hand.
 const MRS_CLAUS: Seg[] = pic(0, [
   '.........ggg',
   '........ggggggggg',
@@ -218,9 +364,9 @@ const MRS_CLAUS: Seg[] = pic(0, [
   '..........gppppppPpp',
   '..........gppppppppnn',
   '...........pppppppp',
-  '..........WWWWWWWWWW',
-  '.........WWWWWWWWWWWW',
-  '.........rrrrrrrrrrrr',
+  '..........AAAAAAAAAA',
+  '.........AAAAAAAAAAAA',
+  '........AAAAAAAAAAAAA',
   '........rrrrrrrrrrrrrr',
   '........rrrrrWWWWWWWWr',
   '.......rrrrrrWWWWWWWWWr',
@@ -235,9 +381,9 @@ const MRS_CLAUS: Seg[] = pic(0, [
   '.....rrrrrrrrrrrrrrrrrrrr',
   '.....rrrrrrrrrrrrrrrrrrrr',
 ])
-const MRS_ARM: Seg[] = [[20, 10, 'qq'], [21, 11, 'qq'], [22, 12, 'qq'], [23, 13, 'pp'], [23, 14, 'pp']]
+const MRS_ARM: Seg[] = [[19, 10, 'qq'], [20, 11, 'qqq'], [21, 12, 'qq'], [22, 13, 'qq'], [23, 14, 'qq']]
 const mrsClausFigure = (accent: string): Figure => ({
-  ink: { r: SUIT, q: SLEEVE, W: SNOW, p: SKIN, P: EYE, n: NOSE_ROSY, k: BOOT, g: HAIR },
+  ink: { r: SUIT, q: SLEEVE, W: SNOW, p: SKIN, P: EYE, n: NOSE_ROSY, k: BOOT, g: HAIR, A: tinted(accent), H: SKIN },
   parts: [
     { g: 'bd', segs: MRS_CLAUS },
     { g: 'la', segs: [[8, 23, 'kkkk'], [8, 24, 'kkkk'], [8, 25, 'kkkkk']] },
@@ -245,27 +391,26 @@ const mrsClausFigure = (accent: string): Figure => ({
     { g: 'bd', segs: MRS_ARM },
   ],
   layers: [
-    // ribbon bow on the shawl
-    { segs: [[16, 8, 'AAA'], [16, 9, 'AAA']], map: { A: accent } },
     // one round lens round the eye, a short temple back towards the hair; mid grey so it
-    // reads as wire, not a patch
-    { segs: [[14, 4, 'kk'], [16, 3, 'kkk'], [16, 4, 'k'], [18, 4, 'k'], [16, 5, 'kkk']], map: { k: '#5C5C66' } },
-    // the naughty-or-nice scroll; the lines tick in, nice green and naughty red
+    // reads as wire, not an eye patch
+    { segs: [[14, 4, 'kk'], [16, 3, 'kkk'], [16, 4, 'k'], [18, 4, 'k'], [16, 5, 'kkk']], map: { k: '#8A8A96' } },
+    // clipboard with a brass clip; the lines tick in, nice green and naughty red
     {
-      g: 'it',
-      map: { p: '#C9B88F', l: '#8E8470' },
-      segs: [[25, 10, 'lllll'], ...[11, 12, 13, 14, 15, 16, 17, 18, 19].map(y => [25, y, 'pWWWp'] as Seg), [25, 20, 'lllll']],
+      map: { o: '#8A5A2C' },
+      segs: [[26, 8, 'yy'], [24, 9, 'oooooo'], ...[10, 11, 12, 13, 14, 15, 16, 17, 18, 19].map(y => [24, y, 'oWWWWo'] as Seg), [24, 20, 'oooooo'], ...[12, 14, 16, 18].map(y => [27, y, 'll'] as Seg)],
     },
-    { g: 'c1', segs: [[26, 12, 'vv']] },
-    { g: 'c2', segs: [[26, 14, 'xx']] },
-    { g: 'c3', segs: [[26, 16, 'vv']] },
+    { g: 'c1', segs: [[25, 12, 'v']] },
+    { g: 'c2', segs: [[25, 14, 'x']] },
+    { g: 'c3', segs: [[25, 18, 'v']] },
   ],
+  late: [{ g: 'bd', segs: HAND }],
 })
 
-// ---- elves (architect, developer, designer) -------------------------------------------------
-// Child proportions: big head, tall pointed cap bent forward with a bell, pointed ear, accent
-// collar, tunic flaring at the hem, tights in the cap colour, curly-toed shoes. Letters:
-// c cap, W band, p skin, P eye, n nose, A collar, t tunic, u sleeve, s tights, k shoe.
+// ---- elf (scout) ----------------------------------------------------------------------------
+// Child proportions: big head, tall pointed cap in the accent bent forward with a bell,
+// pointed ear, tunic flaring at the hem, tights a shade darker, curly-toed shoes, a lantern
+// hanging from the shared hand. Letters: c cap, W band, p skin, P eye, n nose, y bell,
+// t tunic, u sleeve, s tights, k shoe, H hand.
 const ELF: Seg[] = pic(0, [
   '................ccy',
   '..............ccc',
@@ -278,7 +423,7 @@ const ELF: Seg[] = pic(0, [
   '........pppppppppPp',
   '.........ppppppppppn',
   '...........pppppppp',
-  '...........AAAAAAAA',
+  '..........tttttttttt',
   '..........tttttttttt',
   '.........tttttttttttt',
   '.........tttttttttttt',
@@ -292,114 +437,42 @@ const ELF_LEGS: Part[] = [
   { g: 'la', segs: [[10, 20, 'sss'], [10, 21, 'sss'], [10, 22, 'sss'], [10, 23, 'sss'], [14, 23, 'k'], [10, 24, 'kkkkk'], [10, 25, 'kkkk']] },
   { g: 'lb', segs: [[16, 20, 'sss'], [16, 21, 'sss'], [16, 22, 'sss'], [16, 23, 'sss'], [21, 23, 'k'], [16, 24, 'kkkkkk'], [16, 25, 'kkkkk']] },
 ]
-// The near arm forward and down to a hand at x22-23, y16.
-const ELF_ARM: Seg[] = [[19, 13, 'uu'], [20, 14, 'uu'], [21, 15, 'uu'], [22, 16, 'ppp']]
-const elfFigure = (variant: string, accent: string, extra: { parts?: Part[]; layers: Layer[]; arm?: Seg[] }): Figure => {
-  const [tunic, cap] = TUNICS[VARIANTS.indexOf(variant)] ?? TUNICS[0]
+// The near arm forward and down to the shared hand.
+const ELF_ARM: Seg[] = [[19, 12, 'uu'], [20, 13, 'uu'], [21, 14, 'uu'], [22, 15, 'uu']]
+// The lantern hangs from the hand on a wire bail: dark cap and base, amber glass, and a bright
+// flame core in its own group that flickers.
+const LANTERN: Seg[] = [[24, 17, '.kk'], [23, 18, 'kkkk'], [23, 19, 'kaak'], [23, 20, 'kaak'], [23, 21, 'kaak'], [23, 22, 'kkkk']]
+const FLAME: Seg[] = [[24, 19, 'f'], [24, 20, 'ff'], [25, 21, 'f']]
+const elfFigure = (variant: string, accent: string): Figure => {
+  const tunic = cloth(TUNICS, variant)
   return {
     ink: {
-      c: { c: cap.c, o: cap.o }, W: SNOW, p: SKIN, P: EYE, n: NOSE_ROSY, A: flat(accent), y: BRASS,
-      t: { c: tunic.c, o: tunic.o }, u: { c: tunic.o, o: tunic.o }, s: { c: cap.c, o: cap.o }, k: BOOT,
+      c: tinted(accent), W: SNOW, p: SKIN, P: EYE, n: NOSE_ROSY, y: BRASS,
+      t: { c: tunic.c, o: tunic.o }, u: { c: tunic.o, o: tunic.o }, s: { c: tunic.o, o: darker(tunic.o) }, k: BOOT, H: SKIN,
     },
-    parts: [{ g: 'bd', segs: ELF }, ...ELF_LEGS, { g: 'bd', segs: extra.arm ?? ELF_ARM }, ...(extra.parts ?? [])],
-    layers: extra.layers,
+    parts: [{ g: 'bd', segs: ELF }, ...ELF_LEGS, { g: 'bd', segs: ELF_ARM }],
+    layers: [
+      { segs: LANTERN, map: { k: '#3D4752', a: '#E8962A' } },
+      { g: 'fl', segs: FLAME, map: { f: '#FFE680' } },
+    ],
+    late: [{ g: 'bd', segs: HAND }],
   }
 }
 
-// architect: blueprint tube held upright; it sways
-const architectFigure = (variant: string, accent: string): Figure =>
-  elfFigure(variant, accent, {
-    layers: [
-      {
-        g: 'it',
-        map: { b: '#3E78CF', B: '#BBD2F2' },
-        segs: [[24, 11, 'BBB'], ...[12, 13, 15, 16, 18, 19, 21].map(y => [24, y, 'bbb'] as Seg), [24, 14, 'BBB'], [24, 17, 'BBB'], [24, 20, 'BBB'], [24, 22, 'BBB']],
-      },
-    ],
-  })
-
-// developer: earmuffs, the band dark across the cap band, the muff over the ear; a laptop
-// held open in front, the screen flickers
-const developerFigure = (variant: string, accent: string): Figure =>
-  elfFigure(variant, accent, {
-    arm: [[19, 13, 'uu'], [20, 14, 'uu'], [20, 15, 'uu'], [20, 16, 'pp']],
-    layers: [
-      { segs: [[10, 6, r('k', 10)], [8, 7, 'kk'], [7, 8, 'kWWk'], [7, 9, 'kWWk'], [8, 10, 'kk']] },
-      {
-        g: 'it',
-        map: { s: '#C3C9D0', b: '#8AB4F8' },
-        segs: [[22, 16, r('s', 7)], [22, 17, r('k', 7)], ...[11, 12, 13, 14, 15].map(y => [26, y, 'bbk'] as Seg)],
-      },
-      { g: 'cur', map: { b: '#EAF2FF' }, segs: [[26, 12, 'b'], [27, 14, 'b']] },
-    ],
-  })
-
-// designer: a wrapped gift held in both hands, the ribbon curl above it bounces
-const designerFigure = (variant: string, accent: string): Figure =>
-  elfFigure(variant, accent, {
-    arm: [[19, 13, 'uu'], [20, 14, 'uu'], [20, 15, 'uu'], [20, 16, 'pp']],
-    layers: [
-      { map: { e: '#3B9C5F', E: '#2A7A47', x: '#D0453F' }, segs: [[24, 11, 'xx'], [22, 12, 'eexxee'], [22, 13, 'xxxxxx'], [22, 14, 'eexxee'], [22, 15, 'eexxee'], [22, 16, 'EExxEE']] },
-      { g: 'it', segs: [[28, 12, 'x'], [29, 11, 'x'], [29, 10, 'xx'], [30, 9, 'x']] },
-    ],
-  })
-
-// ---- flying sleigh (explore) ----------------------------------------------------------------
-// Red sleigh with a curled dash, gold runners on dark struts, a sack tied with the accent
-// ribbon and gift boxes peeking over the rail, hovering with a sparkle trail behind. Letters:
-// r paint, o sack, A ribbon, e g gift box, y runner, k strut, 1 2 3 sparkle groups.
-const SLEIGH: Seg[] = pic(5, [
-  '............oo',
-  '...........AAAA',
-  '...........AAAA',
-  '.........oooooooo',
-  '.........oooooooo..eggee',
-  '.........oooooooo..eggee',
-  '.........oooooooo..eggee..rr',
-  '........rrrrrrrrrrrrrrrrrrr',
-  '........rrrrrrrrrrrrrrrr.rr',
-  '.........rrrrrrrrrrrrrrrrr',
-  '..........rrrrrrrrrrrrrrr',
-  '...........rrrrrrrrrrrrr',
-  '............rrrrrrrrrrr',
-  '.............kk......kk',
-  '.........yyyyyyyyyyyyyyyyyy',
-  '........y.................y',
-])
-const SPARKLES: Seg[] = [
-  [5, 12, '1'], [4, 13, '111'], [5, 14, '1'],
-  [2, 16, '2'], [1, 17, '222'], [2, 18, '2'],
-  [7, 19, '3'], [3, 10, '3'], [6, 8, '3'],
-]
-const sleighFigure = (variant: string, accent: string): Figure => {
-  const paint = PAINTS[(VARIANTS.indexOf(variant) + PAINTS.length) % PAINTS.length]
-  return {
-    ink: {
-      r: { c: paint.c, o: paint.o }, o: { c: '#9A6B3C', o: '#5C3D1F' }, A: flat(accent),
-      e: { c: '#3B9C5F', o: '#1C5E3A' }, g: { c: '#D0453F', o: '#1C5E3A' },
-      y: flat('#D9A520'), k: flat('#3D4752'),
-      '1': { c: SPARK.c, g: 's1' }, '2': { c: SPARK.c, g: 's2' }, '3': { c: '#FFE08A', g: 's3' },
-    },
-    parts: [{ g: 'bd', segs: SLEIGH }, { g: 'bd', segs: SPARKLES }],
-    layers: [],
-    outer: ['s1', 's2', 's3'],
-  }
-}
-
-const FIGURES: Record<string, (variant: string, accent: string) => Figure> = {
-  orchestrator: (_v, accent) => santaFigure(accent),
-  planner: (_v, accent) => mrsClausFigure(accent),
-  architect: architectFigure,
-  developer: developerFigure,
-  designer: designerFigure,
-  explore: sleighFigure,
-  other: (v, accent) => reindeerFigure(COATS[v], accent),
+const FIGURES: Record<Role, (variant: string, accent: string) => Figure> = {
+  conductor: (_v, accent) => santaFigure(accent),
+  builder: gingerbreadFigure,
+  fixer: nutcrackerFigure,
+  tester: (_v, accent) => mrsClausFigure(accent),
+  scout: elfFigure,
+  plain: (v, accent) => reindeerFigure(COATS[v], accent),
 }
 
 // --- render -------------------------------------------------------------------------------
 type Cell = { c: string; o?: string; g: string }
 
-const svgFor = (figure: Figure): string => {
+// Paints a figure into rect runs, keyed by animation group.
+const paint = (figure: Figure, tail?: Seg[]): Map<string, string[]> => {
   const grid: (Cell | null)[][] = Array.from({ length: XMAS_H }, () => Array(XMAS_W).fill(null))
   const fill = (segs: Seg[], group: string, keep?: Set<string>) => {
     for (const [x, y, s] of segs)
@@ -410,7 +483,7 @@ const svgFor = (figure: Figure): string => {
         keep?.add(`${x + i},${y + DY}`)
       })
   }
-  for (const part of figure.parts) fill(part.segs, part.g)
+  for (const part of figure.parts) fill(part.g === 'tl' && tail ? tail : part.segs, part.g)
 
   // Outline: any outlined pixel that touches empty space, the edge, or a flat pixel.
   const outline = (only?: (x: number, y: number) => boolean, solid: (x: number, y: number) => boolean = (nx, ny) => grid[ny][nx]?.o !== undefined) => {
@@ -431,15 +504,23 @@ const svgFor = (figure: Figure): string => {
   }
   outline()
 
-  const put = (segs: Seg[], group: string, map: Record<string, string> = {}) => {
-    for (const [x, y, s] of segs)
+  // Layers are flat. A second prop pose (`iu`) shares pixels with the first, so it is kept
+  // off the grid and emitted as its own runs.
+  const extra = new Map<string, string[]>()
+  for (const layer of figure.layers) {
+    const group = layer.g ?? 'bd'
+    for (const [x, y, s] of layer.segs)
       [...s].forEach((ch, i) => {
         if (ch === '.' || x + i >= XMAS_W) return
-        const c = map[ch] ?? PROP[ch]
-        if (c) grid[y + DY][x + i] = { c, g: group }
+        const c = layer.map?.[ch] ?? PROP[ch]
+        if (!c) return
+        if (group === 'iu') {
+          const list = extra.get(group) ?? []
+          list.push(`<rect x="${x + i}" y="${y + DY}" width="1" height="1" fill="${c}"/>`)
+          extra.set(group, list)
+        } else grid[y + DY][x + i] = { c, g: group }
       })
   }
-  for (const layer of figure.layers) put(layer.segs, layer.g ?? 'bd', layer.map)
 
   // Late parts go on over the props, outlined where they meet anything that is not figure.
   if (figure.late?.length) {
@@ -450,7 +531,7 @@ const svgFor = (figure: Figure): string => {
 
   // One rect per horizontal run of same-colour pixels in the same group: the panel
   // redraws running rows every second, so fewer nodes matter.
-  const groups = new Map<string, string[]>()
+  const groups = new Map<string, string[]>(extra)
   grid.forEach((row, y) => {
     let x = 0
     while (x < XMAS_W) {
@@ -467,51 +548,55 @@ const svgFor = (figure: Figure): string => {
       x = end
     }
   })
-  const g = (k: string) => (groups.has(k) ? `<g class="${k}">${groups.get(k)?.join('')}</g>` : '')
-  const outer = new Set(['bd', 'la', 'lb', 'tl', ...(figure.outer ?? [])])
-  const props = [...groups.keys()].filter(k => !outer.has(k)).map(g).join('')
-  const trail = (figure.outer ?? []).map(g).join('')
-  return `${trail}${g('tl')}<g class="bd">${g('bd')}${props}</g>${g('la')}${g('lb')}`
+  return groups
+}
+
+// Everything attached to the body rides inside the one `bd` group, so the bob carries it
+// along: body rects sit straight in `bd`, never in a nested `bd`. The tail and the prop
+// poses swap by steps instead of rotating, so pixels never leave the grid.
+const svgFor = (figure: Figure): string => {
+  const groups = paint(figure)
+  const flick = figure.tail ? (paint(figure, figure.tail).get('tl') ?? []) : undefined
+  const g = (k: string, rects = groups.get(k)) => (rects ? `<g class="${k}">${rects.join('')}</g>` : '')
+  const props = [...groups.keys()].filter(k => !['bd', 'la', 'lb', 'tl'].includes(k)).map(k => g(k)).join('')
+  return `<g class="bd">${g('tl')}${flick ? g('tw', flick) : ''}${(groups.get('bd') ?? []).join('')}${props}</g>${g('la')}${g('lb')}`
 }
 
 const XMAS_CSS = `<style>
 .p-christmas .run g{transform-box:fill-box}
+.p-christmas .iu,.p-christmas .tw{opacity:0}
 .p-christmas .run .la{animation:christmas-st .5s steps(1) infinite}
 .p-christmas .run .lb{animation:christmas-st .5s steps(1) infinite -.25s}
 .p-christmas .run .bd{animation:christmas-bob .5s steps(1) infinite -.125s}
-.p-christmas .run .tl{transform-origin:85% 100%;animation:christmas-flick 1.2s ease-in-out infinite}
-.p-christmas .run .bl{transform-origin:50% 0%;animation:christmas-ring .5s ease-in-out infinite}
+.p-christmas .run .tl{animation:christmas-off 1s steps(1) infinite}
+.p-christmas .run .tw{animation:christmas-on 1s steps(1) infinite}
+.p-christmas .run .bl{animation:christmas-ring .5s steps(1) infinite}
 .p-christmas .v-rudolph.run .ns{animation:christmas-glow 1s ease-in-out infinite}
-.p-christmas .c-orchestrator.run .it{transform-origin:0% 100%;animation:christmas-conduct .5s ease-in-out infinite}
-.p-christmas .c-planner.run .c1{animation:christmas-tick 1.5s steps(1) infinite}
-.p-christmas .c-planner.run .c2{animation:christmas-tick 1.5s steps(1) infinite -.5s}
-.p-christmas .c-planner.run .c3{animation:christmas-tick 1.5s steps(1) infinite -1s}
-.p-christmas .c-architect.run .it{transform-origin:50% 100%;animation:christmas-sway 1.6s ease-in-out infinite}
-.p-christmas .c-developer.run .cur{animation:christmas-blink 1s steps(1) infinite}
-.p-christmas .c-designer.run .it{animation:christmas-dab .5s steps(1) infinite}
-.p-christmas .c-explore.run .bd{animation:christmas-hover 1s steps(1) infinite}
-.p-christmas .c-explore.run .s1{animation:christmas-twinkle 1s steps(1) infinite}
-.p-christmas .c-explore.run .s2{animation:christmas-twinkle 1s steps(1) infinite -.33s}
-.p-christmas .c-explore.run .s3{animation:christmas-twinkle 1s steps(1) infinite -.66s}
+.p-christmas .run .it{animation:christmas-off .5s steps(1) infinite}
+.p-christmas .run .iu{animation:christmas-on .5s steps(1) infinite}
+.p-christmas .c-fixer.run .it{animation-duration:1s}
+.p-christmas .c-fixer.run .iu{animation-duration:1s}
+.p-christmas .c-tester.run .c1{animation:christmas-t1 1s steps(1) infinite}
+.p-christmas .c-tester.run .c2{animation:christmas-t2 1s steps(1) infinite}
+.p-christmas .c-tester.run .c3{animation:christmas-t3 1s steps(1) infinite}
+.p-christmas .c-scout.run .fl{animation:christmas-flicker .5s steps(1) infinite}
 @keyframes christmas-st{50%{transform:translateY(-1px)}}
 @keyframes christmas-bob{50%{transform:translateY(1px)}}
-@keyframes christmas-flick{50%{transform:rotate(-18deg)}}
-@keyframes christmas-ring{25%{transform:rotate(16deg)}75%{transform:rotate(-16deg)}}
+@keyframes christmas-off{50%{opacity:0}}
+@keyframes christmas-on{50%{opacity:1}}
+@keyframes christmas-ring{50%{transform:translateX(-1px)}}
 @keyframes christmas-glow{0%,100%{filter:drop-shadow(0 0 0 #FF2F2A);opacity:.7}50%{filter:drop-shadow(0 0 1.5px #FF6A60);opacity:1}}
-@keyframes christmas-conduct{50%{transform:rotate(-24deg)}}
-@keyframes christmas-tick{0%{opacity:0}33%{opacity:1}}
-@keyframes christmas-sway{50%{transform:rotate(6deg)}}
-@keyframes christmas-blink{50%{opacity:.25}}
-@keyframes christmas-dab{50%{transform:translate(1px,-1px)}}
-@keyframes christmas-hover{0%{transform:translateY(0)}25%{transform:translateY(-1px)}50%{transform:translateY(-2px)}75%{transform:translateY(-1px)}}
-@keyframes christmas-twinkle{0%{opacity:0}50%{opacity:1}}
+@keyframes christmas-t1{0%{opacity:0}25%{opacity:1}}
+@keyframes christmas-t2{0%{opacity:0}50%{opacity:1}}
+@keyframes christmas-t3{0%{opacity:0}75%{opacity:1}}
+@keyframes christmas-flicker{25%{opacity:.35}50%{opacity:1}75%{opacity:.6}}
 @media (prefers-reduced-motion: reduce){.p-christmas .run,.p-christmas .run g{animation:none!important}}
 </style>`
 
 // The grid is the same for every redraw of a row, so build it once per look.
 const cache = new Map<string, string>()
 
-const inner = (role: string, variant: string, accent: string): string => {
+const inner = (role: Role, variant: string, accent: string): string => {
   const key = `${role}|${variant}|${accent}`
   let hit = cache.get(key)
   if (hit === undefined) {
@@ -525,7 +610,7 @@ const inner = (role: string, variant: string, accent: string): string => {
 // The cast is chosen by role; the tier only reaches it through the accent colour. The
 // variant is a class too, so only rudolph's nose glows.
 const draw = (x: number, y: number, who: { role: Role; tier: Tier }, o: DrawOptions): string => {
-  const name = FIGURES[who.role] ? who.role : 'other'
+  const name: Role = Object.hasOwn(FIGURES, who.role) ? who.role : 'plain'
   const variant = COATS[o.variant] ? o.variant : 'brown'
   const scale = o.scale ?? 1
   const place = o.mirror ? `translate(${x + XMAS_W * scale},${y}) scale(${-scale},${scale})` : `translate(${x},${y}) scale(${scale})`

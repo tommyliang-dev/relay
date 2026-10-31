@@ -17,7 +17,7 @@ test('cats: pack metadata', () => {
   expect(cats.name).toBe('British Shorthair cats')
   expect(cats.w).toBe(32)
   expect(cats.h).toBe(28)
-  expect(cats.roles.length).toBe(7)
+  expect(cats.roles.length).toBe(6)
   expect(cats.variants).toBe(COAT_NAMES)
 })
 
@@ -49,40 +49,53 @@ test('cats: every role and coat renders inside the grid', () => {
 })
 
 test('cats: tier does not change the drawing', () => {
-  const o = { variant: 'lilac', accent: ACCENT }
-  expect(cats.draw(0, 0, { role: 'developer', tier: 'expert' }, o)).toBe(cats.draw(0, 0, { role: 'developer', tier: 'light' }, o))
+  const o = { variant: 'cream-white', accent: ACCENT }
+  expect(cats.draw(0, 0, { role: 'builder', tier: 'expert' }, o)).toBe(cats.draw(0, 0, { role: 'builder', tier: 'light' }, o))
+})
+
+test('cats: the accent tints each costume as well as the collar', () => {
+  const tinted = (role: string) => cat(0, 0, role, { variant: 'blue', accent: ACCENT }).split(ACCENT).length
+  for (const role of ROLES.filter(r => r !== 'plain')) expect(tinted(role) > tinted('plain')).toBe(true)
+})
+
+test('cats: the tail swaps between two poses inside the body group', () => {
+  const svg = cat(0, 0, 'plain', { variant: 'blue', accent: ACCENT, isWalking: true })
+  expect(svg).toContain('<g class="bd"><g class="tl">')
+  expect(svg).toContain('<g class="tw">')
+  expect(svg.match(/class="bd"/g)?.length).toBe(1)
+  expect(cats.css).not.toMatch(/rotate|scale\(/)
 })
 
 test('cats: runs merge into wide rects', () => {
-  expect(rects(cat(0, 0, 'other', { variant: 'blue', accent: ACCENT })).some(([, , w]) => w > 1)).toBe(true)
+  expect(rects(cat(0, 0, 'plain', { variant: 'blue', accent: ACCENT })).some(([, , w]) => w > 1)).toBe(true)
 })
 
 test('cats: a held prop lifts the near front paw off the ground', () => {
   // The near front leg is drawn in `lb` at x >= 19; only the far back leg (x 10-13) shares it.
   const nearFront = (role: string) => rects(group(cat(0, 0, role, { variant: 'blue', accent: ACCENT }), 'lb')).some(([x]) => x >= 19)
-  for (const role of ROLES.filter(c => c !== 'other')) expect(nearFront(role)).toBe(false)
-  expect(nearFront('other')).toBe(true)
+  for (const role of ROLES.filter(c => c !== 'plain')) expect(nearFront(role)).toBe(false)
+  expect(nearFront('plain')).toBe(true)
 })
 
 test('cats: placement, mirror, dim, walking and fallbacks', () => {
-  const plain = cat(10, 4, 'developer', { variant: 'cream', accent: ACCENT })
+  const plain = cat(10, 4, 'builder', { variant: 'cream', accent: ACCENT })
   expect(plain).toContain('transform="translate(10,4) scale(1)"')
   expect(plain).toContain('opacity="1"')
-  const mirrored = cat(10, 4, 'developer', { variant: 'cream', accent: ACCENT, mirror: true, scale: 2 })
+  const mirrored = cat(10, 4, 'builder', { variant: 'cream', accent: ACCENT, mirror: true, scale: 2 })
   expect(mirrored).toContain(`transform="translate(${10 + CAT_W * 2},4) scale(-2,2)"`)
   expect(mirrored === plain).toBe(false)
-  expect(cat(0, 0, 'planner', { variant: 'cream-van', accent: ACCENT, dim: true })).toContain('opacity="0.45"')
-  expect(cat(0, 0, 'planner', { variant: 'cream-van', accent: ACCENT, isWalking: true })).toContain('class="c-planner run"')
-  expect(cat(0, 0, 'nope', { variant: 'plaid', accent: ACCENT })).toBe(cat(0, 0, 'other', { variant: 'blue', accent: ACCENT }))
+  expect(cat(0, 0, 'tester', { variant: 'cream-van', accent: ACCENT, dim: true })).toContain('opacity="0.45"')
+  expect(cat(0, 0, 'tester', { variant: 'cream-van', accent: ACCENT, isWalking: true })).toContain('class="c-tester run"')
+  expect(cat(0, 0, 'nope', { variant: 'plaid', accent: ACCENT })).toBe(cat(0, 0, 'plain', { variant: 'blue', accent: ACCENT }))
 })
 
 test('cats: cached markup is identical and CSS is one scoped style block', () => {
-  const a = cat(0, 0, 'architect', { variant: 'lilac', accent: '#7F77DD' })
-  const b = cat(0, 0, 'architect', { variant: 'lilac', accent: '#7F77DD' })
+  const a = cat(0, 0, 'fixer', { variant: 'lilac-point', accent: '#7F77DD' })
+  const b = cat(0, 0, 'fixer', { variant: 'lilac-point', accent: '#7F77DD' })
   expect(a).toBe(b)
   expect(cats.css.startsWith('<style>') && cats.css.endsWith('</style>')).toBe(true)
-  expect(cats.css).toContain('.p-cats .c-planner.run .c3')
-  expect(cats.css).toContain('animation:cats-tick')
+  expect(cats.css).toContain('.p-cats .c-tester.run .c3')
+  expect(cats.css).toContain('animation:cats-t3 1s')
   expect(cats.css).toContain('prefers-reduced-motion')
   expect(cats.css).toContain('.p-cats .run,.p-cats .run g{animation:none!important}')
 })
