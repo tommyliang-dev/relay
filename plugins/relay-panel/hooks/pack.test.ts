@@ -529,6 +529,9 @@ test('gallery: one card per pack, labelled; Use sets the everyday pack', async (
   const altOf = (c: { alt: string; source: string }[], id: string) => c.find(x => x.source.includes(scope(id)))?.alt
   let c = await cards()
   expect(c.length).toBe(packIds().length)
+  // A pane over 100,000 characters draws nothing and shows no error.
+  const total = c.reduce((n, x) => n + x.source.length, 0)
+  expect(total < 95_000).toBe(true)
   for (const id of packIds()) {
     const card = c.find(x => x.source.includes(scope(id)))
     expect(card).toBeDefined()

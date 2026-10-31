@@ -2,6 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import { DEFAULT_PACK, PACKS, packById, packIds, resolvePack } from './packs'
+import { compact } from './packs/compact'
 import {
   OFF_SEASON,
   SEASONS,
@@ -669,8 +670,10 @@ const rowCat = (
 // The compact strip's height: room for a sprite up to 32px tall.
 const COMPACT_H = 32
 
+// A pane over 100,000 characters draws nothing and says nothing, so the sprites go through
+// `compact` (the gallery's five cards were ~330,000 before it).
 const svg = (p: Pack, W: number, H: number, body: string): string =>
-  `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${PANE_CSS}${p.css}${body}</svg>`
+  `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${PANE_CSS}${p.css}${compact(body)}</svg>`
 
 // The pane's own title already says "Agents": the header names the flow, if any.
 const headerSvg = (pk: Pack, W: number, title: string, t: ReturnType<typeof totals>): string => {
