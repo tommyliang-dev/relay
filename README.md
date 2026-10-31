@@ -18,17 +18,21 @@ relay keeps that design and adds:
 
 ## Quick start
 
-Paste one of these prompts into Claude Code.
+Paste one of these prompts into Claude Code, either the terminal (CLI) or the Claude app. The prompt tells Claude what to do if the `claude` command is not available.
 
 ### Prompt 1: install
 
 ````
 Install relay for me:
 
-1. Run these commands:
+1. Install the plugins. Run these in the shell:
    claude plugin marketplace add tommyliang-dev/relay
    claude plugin install relay@relay
    claude plugin install relay-panel@relay
+   If the `claude` command is not found or fails (for example in the Claude app), do not stop. Give me these slash commands to type myself, then wait until I say they are done:
+   /plugin marketplace add tommyliang-dev/relay
+   /plugin install relay@relay
+   /plugin install relay-panel@relay
 2. If savvy-progress@claude-kit or another agents panel is enabled, tell me and ask before disabling it.
 3. Ask me how I want my worker models set up. Show me these four presets with the exact models (as of October 2026):
    - Default: light Sonnet 5.5 low, medium Sonnet 5.5 medium, careful Sonnet 5.5 high, heavy Opus 5.5 high, expert Opus 5.5 xhigh.
@@ -40,7 +44,7 @@ Install relay for me:
    - ask me where to save a backup copy, and recommend my Desktop (~/Desktop/CLAUDE.md.backup-<date>);
    - save the backup and tell me its path;
    - keep everything already in the file, and show me the diff before you save.
-5. Tell me to restart Claude Code.
+5. Tell me to restart (terminal: exit and run `claude` again; Claude app: quit and reopen it).
 6. Give me a short tour:
    - /relay <task> runs a task through relay.
    - /relay-agents opens the agents panel.
@@ -56,10 +60,14 @@ Good for: trying relay with nothing global changed except an optional model bloc
 ````
 Install relay for me and make it my default way to delegate:
 
-1. Run these commands:
+1. Install the plugins. Run these in the shell:
    claude plugin marketplace add tommyliang-dev/relay
    claude plugin install relay@relay
    claude plugin install relay-panel@relay
+   If the `claude` command is not found or fails (for example in the Claude app), do not stop. Give me these slash commands to type myself, then wait until I say they are done:
+   /plugin marketplace add tommyliang-dev/relay
+   /plugin install relay@relay
+   /plugin install relay-panel@relay
 2. If savvy-progress@claude-kit or another agents panel is enabled, tell me and ask before disabling it.
 3. Ask me how I want my worker models set up. Show me these four presets with the exact models (as of October 2026):
    - Default: light Sonnet 5.5 low, medium Sonnet 5.5 medium, careful Sonnet 5.5 high, heavy Opus 5.5 high, expert Opus 5.5 xhigh.
@@ -81,7 +89,7 @@ Install relay for me and make it my default way to delegate:
      - A repo's own CLAUDE.md / AGENTS.md wins over this section.
 
 5. If another orchestrator would compete with relay (for example the savvy-flow-auto skill or savvy-flow@claude-kit), list it and ask me whether to disable it.
-6. Tell me to restart Claude Code.
+6. Tell me to restart (terminal: exit and run `claude` again; Claude app: quit and reopen it).
 7. Give me a short tour:
    - /relay <task> runs a task through relay.
    - /relay-agents opens the agents panel.
@@ -220,6 +228,7 @@ Switch me from savvy-flow to relay:
 1. Before you change anything, ask me where to save a backup of ~/.claude/CLAUDE.md, and recommend my Desktop (~/Desktop/CLAUDE.md.backup-<date>). Save it and tell me the path.
 2. Run: claude plugin marketplace add tommyliang-dev/relay, claude plugin install relay@relay, claude plugin install relay-panel@relay.
 3. Run: claude plugin disable savvy-flow@claude-kit and claude plugin disable savvy-progress@claude-kit.
+   For steps 2 and 3, if the `claude` command is not found or fails (for example in the Claude app), give me the same commands as /plugin slash commands (/plugin marketplace add ..., /plugin install ..., /plugin disable ...) to type myself, and wait until I say they are done.
 4. If I have a savvy-flow-auto skill in ~/.claude/skills, move it aside (for example to ~/.claude/skills-disabled/) instead of deleting it.
 5. In ~/.claude/CLAUDE.md, change references to savvy-flow, savvy-progress and their tools to relay, relay-panel and mcp__relay-panel__progress / step. Keep everything else, and show me the diff before you save.
 6. Keep all backups. Tell me where they are, then tell me to restart Claude Code.
@@ -251,9 +260,9 @@ For: removing relay and putting things back.
 ```
 Remove relay:
 1. If there is a CLAUDE.md backup on my Desktop (~/Desktop/CLAUDE.md.backup-*), ask me whether to restore it. Otherwise remove the "# Orchestration (relay)" and "## Relay models" sections from ~/.claude/CLAUDE.md. Show me the diff before you save.
-2. Run: claude plugin uninstall relay@relay and claude plugin uninstall relay-panel@relay.
+2. Run: claude plugin uninstall relay@relay and claude plugin uninstall relay-panel@relay. If the `claude` command is not found or fails (for example in the Claude app), give me /plugin uninstall relay@relay and /plugin uninstall relay-panel@relay to type myself, and wait until I say they are done.
 3. Re-enable anything relay setup disabled (for example savvy-flow@claude-kit or savvy-progress@claude-kit), and move back any skill that was moved aside. Ask me first.
-4. Tell me to restart Claude Code.
+4. Tell me to restart (terminal: exit and run `claude` again; Claude app: quit and reopen it).
 ```
 
 ### Make a new sprite pack
