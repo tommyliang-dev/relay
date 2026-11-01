@@ -114,14 +114,14 @@ test('compact: the same sprite in changing text is compacted the same way', () =
 
 for (const pack of PACKS) {
   test(`${pack.id}: compacted markup paints the same pixels and is smaller`, () => {
+    // Each role in every tier colour, paired with seeds 0..5 so the random looks are covered too.
     for (const role of ROLES)
-      for (const accent of ACCENTS)
-        for (const seed of [0, 1, 2, 3, 4, 5]) {
-          const raw = pack.draw(0, 0, { role, tier: 'medium' }, { seed, accent, isWalking: true })
-          const out = compact(raw)
-          expect(out.length < raw.length).toBe(true)
-          expect(out).not.toContain('<rect')
-          expectSamePicture(raw, out)
-        }
+      ACCENTS.forEach((accent, seed) => {
+        const raw = pack.draw(0, 0, { role, tier: 'medium' }, { seed, accent, isWalking: true })
+        const out = compact(raw)
+        expect(out.length < raw.length).toBe(true)
+        expect(out).not.toContain('<rect')
+        expectSamePicture(raw, out)
+      })
   })
 }

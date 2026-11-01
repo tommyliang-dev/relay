@@ -90,7 +90,7 @@ Sprite boxes: cats, dogs and turkeys 36x28, christmas 32x28, winter 36x30, adven
 
 Adding a pack = one file + one line in the registry. `hooks/packs/packs.test.ts` runs over every registered pack, so it needs no test of its own. No panel change.
 
-**Gallery size.** A pane over 100,000 characters draws nothing and says nothing. `register.tsx` runs every pane's sprites through `packs/compact.ts` (rect runs become one path per fill). All seven packs together are about 79,500 characters of compacted sprites and CSS before card text, and `packs.test.ts` fails at 90,000, so a new pack has about 10,000 characters for its six walking sprites and CSS.
+**Gallery size.** A pane over 100,000 characters draws nothing and says nothing. `register.tsx` runs every pane's sprites through `packs/compact.ts` (rect runs become one path per fill). All seven packs together are about 80,000 characters of compacted sprites and CSS before card text, and `packs.test.ts` fails at 90,000, so a new pack has about 10,000 characters for its six walking sprites and CSS.
 
 ## Active pack: storage and redraw
 

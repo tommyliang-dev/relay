@@ -57,7 +57,7 @@ A themed pack may reinterpret each costume for its theme. It must keep the role 
 - Every CSS selector starts with `.p-<id> `, and every `@keyframes` name is prefixed `<id>-`. `packs.test.ts` checks both.
 - `dim` sets opacity .45 (planned tasks). `mirror` flips the sprite inside its own `w` box (right-to-left languages). `scale` defaults to 1.
 - Cache the built rects per look (role + seed look + accent). The panel redraws every second.
-- **Panes cap at 100,000 characters** and draw nothing, silently, past it. `register.tsx` runs every pane's sprites through `packs/compact.ts` (rect runs become one `<path>` per fill), which took the gallery from ~335,000 to ~79,500 for all seven packs (compacted sprites and CSS, before card text). Packs keep emitting plain `<rect x y width height fill>`. `packs.test.ts` fails at 90,000, so a new pack has about 10,000 characters for its six walking sprites and CSS; a bigger one needs trimming. `compact.test.ts` checks that the compacted markup paints the same pixels.
+- **Panes cap at 100,000 characters** and draw nothing, silently, past it. `register.tsx` runs every pane's sprites through `packs/compact.ts` (rect runs become one `<path>` per fill), which took the gallery from ~335,000 to ~80,000 for all seven packs (compacted sprites and CSS, before card text). Packs keep emitting plain `<rect x y width height fill>`. `packs.test.ts` fails at 90,000, so a new pack has about 10,000 characters for its six walking sprites and CSS; a bigger one needs trimming. `compact.test.ts` checks that the compacted markup paints the same pixels.
 
 ## Verification
 

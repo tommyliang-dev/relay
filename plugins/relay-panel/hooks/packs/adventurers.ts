@@ -15,11 +15,11 @@
 // Motion (only while running, off under prefers-reduced-motion): everyone steps in place (`la` /
 // `lb` legs half a cycle apart) with a body bob (`bd`). On top: the magician's orb pulses (halo
 // and hot core blink on); the thief's daggers swing in turn (`dl` / `dr`) with a glint running
-// down each blade (`ga` / `gb`), the eye glints pulse (`eg`) and the coat hem sways (`hm`); the
-// knight raises the sword a step while a glint (`gl`) climbs the blade; the healer's tome bobs
-// with its glow while plus signs and sparkles rise and fade above it (`s1`..`s3`); the archer's
-// fire arrow flickers between two flame frames with a white-hot core; the ninja's eyes twinkle
-// and the tail of the headband flutters.
+// down each blade (`ga` / `gb`), the eye glints pulse (`eg`), wisps rise over the shoulders
+// (`w1`) and the coat hem sways (`hm`); the knight raises the sword a step while a glint (`gl`)
+// climbs the blade; the healer's tome bobs with its glow while plus signs and sparkles rise and
+// fade above it (`s1`..`s3`); the archer's fire arrow flickers between two flame frames with a
+// white-hot core; the ninja's eyes twinkle and the tail of the headband flutters.
 //
 // Size: the gallery pane draws nothing past 100,000 characters across every pack, so rows are
 // encoded painter-style (a colour's run may cross pixels painted after it) to keep runs few,
@@ -144,8 +144,8 @@ const DAG: Seg[] = [
 const VGLINT = { W: '#F1EAFF' }
 const thief = (A: Ink): Figure => ({
   ink: {
-    H: solid(K0), h: solid('#2B2540', 'H'), V: solid('#4F4A66', 'C'),
-    f: tone('#E8C9A0', undefined, undefined, K0), E: solid(K0, 'f'), e: solid('#D9A43A', 'f'), m: solid('#B98A70', 'f'),
+    H: solid(K0), h: solid('#2B2540', 'H'), V: solid('#7A62C4', 'C'),
+    f: tone('#E8C9A0', undefined, undefined, K0), E: solid(K0, 'f'), e: solid('#A57CFF', 'f'), m: solid('#B98A70', 'f'),
     C: tone('#1A1626', undefined, '#34294D', K0), T: tone('#2E2A3A', undefined, undefined, K0),
     B: solid('#2B2540', 'C'), A: solid(A.c, 'C'),
     p: tone('#15121F', undefined, undefined, K0), b: tone('#2B2540', undefined, undefined, K0),
@@ -169,12 +169,14 @@ const thief = (A: Ink): Figure => ({
     { g: 'lb', segs: mirrorSegs(THIEF_LEG) },
   ],
   layers: [
-    // eye glints, and the two daggers, each swinging with a glint that runs down its edge in four steps
-    { g: 'eg', flat: { W: '#FFFFFF' }, segs: [[12, 10, 'W......W']] },
+    // eye glints, the two daggers (each swings with a glint that runs down its edge in four
+    // steps) and wisps over the shoulders
+    { g: 'eg', flat: { W: '#F3ECFF' }, segs: [[12, 10, 'W......W']] },
     { g: 'dl', flat: DAGGER, segs: DAG },
     { g: 'dr', flat: DAGGER, segs: mirrorSegs(DAG) },
     { g: 'ga', in: 'dl', flat: VGLINT, segs: [[8, 21, 'W']] },
     { g: 'gb', in: 'dr', flat: VGLINT, segs: [[23, 21, 'W']] },
+    { g: 'w1', flat: { v: 'rgba(165,124,255,.6)' }, segs: [[8, 12, 'v'], [23, 11, 'v']] },
   ],
 })
 
@@ -543,6 +545,7 @@ ${R} .dr{animation:adventurers-arm 1s steps(1) infinite -.5s}
 ${R} .ga{animation:adventurers-gsa 1s steps(1) infinite}
 ${R} .gb{animation:adventurers-gsb 1s steps(1) infinite}
 ${R} .eg{animation:adventurers-glow 1s ease-in-out infinite}
+${R} .w1{animation:adventurers-rise 1s steps(1) infinite}
 ${R}.c-fixer .sw{animation:adventurers-raise 1s steps(1) infinite}
 ${R} .gl{animation:adventurers-up 1s steps(1) infinite}
 ${R}.c-tester .tm{animation:adventurers-hover 1s steps(1) infinite}
@@ -563,6 +566,7 @@ ${R} .tl{animation:adventurers-flap .5s steps(1) infinite}
 @keyframes adventurers-arm{50%{transform:translateY(-2px)}}
 @keyframes adventurers-gsa{25%{transform:translateY(2px)}50%{transform:translateY(4px)}75%{transform:translate(1px,6px)}}
 @keyframes adventurers-gsb{25%{transform:translateY(2px)}50%{transform:translateY(4px)}75%{transform:translate(-1px,6px)}}
+@keyframes adventurers-rise{33%{transform:translateY(-1px);opacity:.7}67%{transform:translateY(-2px);opacity:.35}}
 @keyframes adventurers-hover{50%{transform:translateY(-1px)}}
 @keyframes adventurers-glow{50%{opacity:.35}}
 @keyframes adventurers-up{0%{transform:translateY(8px)}25%{transform:translateY(4px)}50%{transform:none}75%{transform:translateY(-3px)}}
