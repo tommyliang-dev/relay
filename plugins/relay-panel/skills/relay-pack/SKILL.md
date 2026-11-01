@@ -1,6 +1,6 @@
 ---
 name: relay-pack
-description: List, preview or switch the sprite pack drawn in the relay agents panel (an everyday pack, or a shuffle, with holiday packs in season; cats, clawd, dogs, turkeys and more). Use when the user asks to change, swap, shuffle or show the panel's sprites, pets or critters, or to turn the holiday packs on or off.
+description: List, preview or switch the sprite pack drawn in the relay agents panel (an everyday pack, or a shuffle, with holiday packs in season; cats, clawd, dogs, winter, adventurers, turkeys and more). Use when the user asks to change, swap, shuffle or show the panel's sprites, pets or critters, or to turn the holiday packs on or off.
 ---
 
 # Sprite packs

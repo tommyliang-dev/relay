@@ -5,9 +5,11 @@ import { clawd } from './clawd'
 import { dogs } from './dogs'
 import { turkeys } from './turkeys'
 import { christmas } from './christmas'
+import { winter } from './winter'
+import { adventurers } from './adventurers'
 import type { Pack } from './types'
 
-export const PACKS: readonly Pack[] = [cats, clawd, dogs, turkeys, christmas]
+export const PACKS: readonly Pack[] = [cats, clawd, dogs, turkeys, christmas, winter, adventurers]
 
 // The off-season pack (packs/seasons.ts OFF_SEASON) and the fallback for any unknown id.
 export const DEFAULT_PACK = 'clawd'

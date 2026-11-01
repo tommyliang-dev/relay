@@ -16,12 +16,16 @@ plugins/
     hooks/packs/types.ts               Pack, Role, Tier, DrawOptions
     hooks/packs/index.ts               registry: packs, default pack, lookup
     hooks/packs/seasons.ts             holiday table, pack resolution, shuffle
-    hooks/packs/cats.ts                British Shorthair cats
-    hooks/packs/clawd.ts               Clawd, the pixel crab (costumes by tier)
-    hooks/packs/dogs.ts                six dog breeds
-    hooks/packs/turkeys.ts             Thanksgiving turkeys (six heritage breeds)
+    hooks/packs/compact.ts             merges rect runs into paths so the gallery fits the pane limit
+    hooks/packs/cats.ts                British Shorthair cats (six coats, by role)
+    hooks/packs/clawd.ts               Clawd, the pixel crab (costumes by role)
+    hooks/packs/dogs.ts                six dog breeds, by role
+    hooks/packs/turkeys.ts             Thanksgiving turkeys (six heritage colours, by role)
     hooks/packs/christmas.ts           Santa, gingerbread, nutcracker, Mrs Claus, elf, reindeer
-    hooks/packs/*.test.ts              per-pack tests; contract.test.ts runs over every pack
+    hooks/packs/winter.ts              snowman, yeti, polar bear, snow owl, arctic fox, penguin
+    hooks/packs/adventurers.ts         magician, Thief, knight, healer, archer, ninja
+    hooks/packs/packs.test.ts          one test that runs over every pack
+    hooks/packs/seasons.test.ts        holiday table and pack resolution
     skills/relay-pack/SKILL.md         list / preview / swap packs
     types/index.d.ts                   panel state types
     README.md

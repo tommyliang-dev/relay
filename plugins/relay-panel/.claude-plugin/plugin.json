@@ -1,6 +1,6 @@
 {
   "name": "relay-panel",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Progress bar above the prompt for /relay, plus an agents panel (/relay-agents) with swappable sprite packs: running, finished and planned subagents with model, task progress, context, cost and time. Forked from savvy-progress in johnnyvizz/claude-kit.",
   "author": { "name": "Tommy Liang" },
   "types": "./types/index.d.ts",
@@ -24,7 +24,7 @@
       "title": "Everyday pack",
       "description": "The pack drawn all year, or shuffle for a random non-holiday pack each session. /relay-pack <id> or /relay-pack shuffle overrides it",
       "default": "clawd",
-      "options": ["clawd", "cats", "dogs", "shuffle"]
+      "options": ["clawd", "cats", "dogs", "winter", "adventurers", "shuffle"]
     },
     "seasons": {
       "type": "string",

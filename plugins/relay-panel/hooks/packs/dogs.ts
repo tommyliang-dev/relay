@@ -1,31 +1,32 @@
-// Pixel dogs in profile, 32x28 grid units, drawn as SVG rects. Sibling of cats.ts: same
-// canvas, same facing, same generated outline, same collar band and prop anchor.
-//
-// A dog differs from the cat by a projecting snout with a dark nose at the tip, a mouth
-// line, a longer neck and chest, and a breed tail and ears. Each breed is drawn whole, as
-// pixel pictures, so its silhouette reads with no interior detail.
+// Dogs: pixel dogs in profile, drawn as SVG rects. Sibling of cats.ts: same canvas, facing,
+// generated outline, collar band and prop anchor; each breed is drawn whole as a pixel picture.
+// Cast: conductor Pomeranian (top hat, bow tie, baton), builder corgi (headphones, laptop),
+//   fixer shiba (flat cap, mallet), tester bichon (spectacles, test tube), scout husky
+//   (bandana, eye patch, flashlight), plain Australian shepherd (collar only). The seed is ignored.
+// Accent: the collar, plus each costume's main piece (hat band, headphones, cap, tube rim, bandana).
+// Box: 36x28 grid units; the dog sits two rows down so tall hats fit above it.
+// Animation: CSS only; legs step, the body bobs, the tail wags (faster than a cat's swish).
 
 import { type DrawOptions, type Pack, type Role, ROLES, type Tier } from './types'
 
-export const DOG_W = 32
-export const DOG_H = 28
+const DOG_W = 36
+const DOG_H = 28
 const DY = 2 // the dog sits two rows down so tall hats fit above it
 
 // --- coats ---------------------------------------------------------------------------------
 // o outline, s shadow, b base, h highlight; patch: the second coat tone (white markings,
-// urajiro). n nose leather, e iris, i inner ear, t tongue, ink: a prop colour that reads on
-// this coat (spectacles, eye patch).
+// urajiro). n nose leather, e iris, i inner ear, ink: a prop colour that reads on this coat
+// (spectacles, eye patch).
 type Tones = { o: string; s: string; b: string; h: string }
-type Coat = Tones & { patch?: Tones; n: string; e: string; i: string; t: string; ink: string }
+type Coat = Tones & { patch?: Tones; n: string; e: string; i: string; ink: string }
 
-// Warm off-whites with a grey outline, so white dogs read on light rows.
-const WHITE: Tones = { o: '#9A948A', s: '#DCD6CB', b: '#F5F2EC', h: '#FFFFFF' }
+// A warm off-white with a grey outline, so white dogs read on light rows.
 const CREAM_WHITE: Tones = { o: '#A0978A', s: '#E0D9CC', b: '#F6F2EA', h: '#FFFFFF' }
 
 // --- pictures ------------------------------------------------------------------------------
 // A segment is [x, y, pixels], in the dog's own coordinates (before DY). Coat letters:
 // b s h coat tones, w v u the patch's base/shadow/highlight, n nose, E iris, P pupil,
-// G glint, i inner ear, t tongue, O forced outline, Q forced patch outline. '.' and ' ' are
+// G glint, i inner ear, O forced outline, Q forced patch outline. '.' and ' ' are
 // empty. Everything is filled first, then every filled pixel that touches empty space
 // becomes the outline tone of its own coat.
 type Seg = [x: number, y: number, s: string]
@@ -33,7 +34,6 @@ const pic = (y0: number, rows: string[]): Seg[] => rows.map((s, i) => [0, y0 + i
 
 type Legs = { backFar: Seg[]; backNear: Seg[]; frontFar: Seg[]; frontNear: Seg[] }
 type Breed = {
-  label: string
   coat: Coat
   tail: Seg[]
   body: Seg[] // head, neck and body
@@ -45,7 +45,6 @@ type Breed = {
   hats?: Partial<Record<string, [dx: number, dy: number]>> // per-costume headwear offsets
   eye: [dx: number, dy: number] // eyewear offset from the husky's eye
   neck: [dx: number, dy: number] // bow tie offset from the husky's throat
-  topknot?: Seg[] // drawn only when no hat covers the crown
 }
 
 // --- legs ----------------------------------------------------------------------------------
@@ -58,18 +57,18 @@ const HIND: Record<number, string[]> = {
   7: ['.TTTTT', 'TTTTTTT', '.TTTTT', '.LLLL', 'LLLL', 'LLLL', 'PPPPP'],
   6: ['.TTTTT', 'TTTTTT', '.LLLL', 'LLLL', 'LLLL', 'PPPPP'],
   5: ['TTTTTT', 'TTTTTT', 'LLLLL', 'LLLL', 'PPPPP'],
-  3: ['LLLL', 'LLLL', 'PPPPP'],
 }
 // Fore: straight under the chest, thicker at the top, a small forward paw.
 const FORE: Record<number, string[]> = {
   7: ['TTTTT', 'TTTTT', '.LLLL', '.LLLL', '.LLLL', '.LLLL', '.PPPPP'],
   6: ['TTTTT', 'TTTTT', '.LLLL', '.LLLL', '.LLLL', '.PPPPP'],
   5: ['TTTTT', 'LLLLL', '.LLLL', '.LLLL', '.PPPPP'],
-  3: ['LLLL', 'LLLL', 'PPPPP'],
 }
-// Samoyed: the same shapes with a fringe of fur down the back of each leg.
-const HIND_FLUFF = ['..TTTTT', '.TTTTTTT', '..TTTTT', '.FLLLL', 'FLLLL', 'FLLLL', '.PPPPP']
-const FORE_FLUFF = ['.TTTTT', '.TTTTT', 'FFLLLL', 'FFLLLL', '.FLLLL', '..LLLL', '..PPPPP']
+// Australian shepherd: a hind leg with the tan point (F) down the back of the lower leg.
+const AUSSIE_HIND = ['.TTTTT', 'TTTTTTT', '.TTTTT', '.FFLL', 'FFLL', 'FFLL', 'PPPPP']
+
+// Pomeranian: short legs under the fluffy skirt, four rows from belly to paw.
+const POM_LEG = ['LLLL', 'LLLL', 'LLLL', 'PPPPP']
 
 type LegTones = { T: string; L: string; P: string; F?: string }
 // The far side of the coat: base and highlight drop to shadow.
@@ -111,11 +110,10 @@ const reaching = (u: string, p: string, d: string): Seg[] => [
 // Husky: the reference head. Upright triangular ears set back on the skull, grey cap with
 // white brow spots, white mask and muzzle, blue eyes, sickle tail curled over the back.
 const HUSKY: Breed = {
-  label: 'Siberian husky',
   coat: {
     o: '#3E4550', s: '#68717D', b: '#89929E', h: '#A7AFBA',
     patch: { o: '#8E8A84', s: '#D6D3CD', b: '#F2F0EB', h: '#FFFFFF' },
-    n: '#2A2B30', e: '#5CB2F2', i: '#E6D2CF', t: '#E07A85', ink: '#2B323A',
+    n: '#2A2B30', e: '#5CB2F2', i: '#E6D2CF', ink: '#2B323A',
   },
   tail: pic(3, [
     '.....bbbb',
@@ -163,11 +161,10 @@ const HUSKY: Breed = {
 // Corgi: long low body, very short legs, large upright pointed ears, fox face. Red with a
 // white muzzle, chest and paws. Short fluffy tail.
 const CORGI: Breed = {
-  label: 'Corgi',
   coat: {
     o: '#7A3D1A', s: '#B9652B', b: '#DB863B', h: '#EDA75F',
     patch: { o: '#9A8F82', s: '#DED7CC', b: '#F6F2EB', h: '#FFFFFF' },
-    n: '#2A2426', e: '#3A2618', i: '#F1C8B6', t: '#E07A85', ink: '#3A2A20',
+    n: '#2A2426', e: '#3A2618', i: '#F1C8B6', ink: '#3A2A20',
   },
   tail: pic(12, [
     '..bbb',
@@ -207,55 +204,62 @@ const CORGI: Breed = {
   neck: [-1, 2],
 }
 
-// Samoyed: all white and fluffy, scalloped chest ruff, belly fringe and plume, upright
-// ears, smiling mouth with the tongue showing, plume tail lying over the back, dark eyes.
-const SAMOYED: Breed = {
-  label: 'Samoyed',
-  coat: { ...WHITE, n: '#2A2628', e: '#3A2A20', i: '#EBC6C0', t: '#E7838F', ink: '#3A4048' },
-  tail: pic(5, [
-    '....b.bb.b',
-    '...bbbbbbbb',
-    '..bbhhhhhbbb',
-    '..bbhbbbbbbb',
-    '..bbbsssssss',
-    '...bbsssss',
-    '....bbs',
+// Pomeranian, chocolate and cream: a small, very fluffy fox-faced dog. Chocolate cap, ears,
+// back and plume tail; cream muzzle and blaze, a wide cream chest ruff and cream lower legs.
+// Small pointed ears, a short muzzle with a dark nose, the plume curled up over the back, and a
+// fluffy skirt that leaves only the cream paws showing.
+const POMERANIAN: Breed = {
+  coat: {
+    o: '#2E1A0E', s: '#4A2D19', b: '#6B4226', h: '#8A5A36',
+    patch: { o: '#8A7352', s: '#D9C7A4', b: '#F1E3C8', h: '#FBF1DE' },
+    n: '#1E1618', e: '#2A1A10', i: '#C99A78', ink: '#3A2418',
+  },
+  tail: pic(6, [
+    '.......bbb.bb',
+    '.....bbbhhhbbbb',
+    '...bbbbhbbbbbb',
+    '..bbbhbbssbbbbb',
+    '..bbbhbs..sbbbb',
+    '..bbbbbs.sbbbbb',
+    '...bbbbbbbbbbbbb',
+    '...bbbbbbbbbb',
   ]),
-  body: tuck(pic(1, [
-    '...............s...bb',
-    '..............sss.bibb',
-    '..............sssbiibb',
-    '..............bbbbbbbbbbb',
-    '.............bbbbbhhhhbbbb',
-    '............bbbbbbbbbbbbbb',
-    '...........bbbbbbbbbbbbbPEb',
-    '............bbbbbbbbbbbbbbbbbnn',
-    '..........bbbbbbbbbbbbbObbbbbbn',
-    '...........bbbbbbbbbbbbbOOOOb',
-    '.......b.bbbbbbbbbbbbbbbbttb',
-    '......bhhhhhhhbbbbbbbbbbbbb',
-    '.....bbbbbbbbbbbbbbbbbbbbb',
-    '.....bbbbbbbbbbbbbbbbbbbb',
-    '.....bbbbbbbbbbbbbbbbbbbbb',
-    '.....bbbbbbbbbbbbbbbbbbbb',
-    '.....sbbbbbbbbbbbbbbbbbbbb',
-    '......ssssbbbbbbbbbbbbbbb',
-    '.......sbbsbbsbbsbbsbbsbb',
-  ]), 13, 16),
-  legs: legsFor({ top: 19, hind: 4, fore: 17, hindRows: HIND_FLUFF, foreRows: FORE_FLUFF, hindTones: { T: 'b', L: 'b', P: 'b', F: 'h' }, foreTones: { T: 'b', L: 'b', P: 'b', F: 'h' } }),
-  collar: [[14, 9, 'AAA'], [14, 10, 'AAA'], [15, 11, 'AAAA'], [16, 12, 'AAAAAA'], [20, 13, 'g']],
-  arm: raised('b', 'b', 'h'),
-  devArm: reaching('b', 'b', 'h'),
-  head: [0, 0],
-  eye: [0, 0],
-  neck: [0, 0],
+  body: tuck(pic(3, [
+    '.....................b',
+    '................s...bib',
+    '................ss.biib',
+    '................bbbbhhhhbb',
+    '...............bbbbbhhhhbbw',
+    '..............bbbbbbbbbbPGww',
+    '..............bbbbbbbbbbPPww',
+    '.............bbbbbbbbwwwwwwwnn',
+    '...........bbbbbbbbbwwwwwwwwwn',
+    '...........bbbbbbbbwwwwwQQQQw',
+    '.........bbbbbbbbbbbbwwwwwww',
+    '........bhhhhhhhbbwwwwwwwwww',
+    '.......bbbbbbbbbbwwwwwwwwwww',
+    '.......bbbbbbbbbwwwwwwwwwww',
+    '.......bbbbbbbbwwwwwwwwwwww',
+    '.......bbbbbbbwwwwwwwwwwwwww',
+    '.......bbbbbbbwwwwwwwwwwwww',
+    '......bbbbbbbbwwwwwwwwwwwww',
+    '.......sbbbbbbwwwwwwwwwwwwv',
+    '.......ssbbbbbvwvwvwvwvwvw',
+  ]), 14, 16),
+  legs: legsFor({ top: 22, hind: 7, fore: 19, hindRows: POM_LEG, foreRows: POM_LEG, hindTones: { T: 'b', L: 'w', P: 'w' }, foreTones: { T: 'w', L: 'w', P: 'w' } }),
+  collar: [[11, 11, 'AA'], [12, 12, 'AAA'], [14, 13, 'AAAAAA'], [20, 14, 'AAAA'], [22, 15, 'g']],
+  arm: raised('w', 'w', 'u'),
+  devArm: reaching('w', 'w', 'u'),
+  head: [0, 2],
+  hats: { conductor: [1, 2] },
+  eye: [0, 1],
+  neck: [0, 1],
 }
 
 // Bichon frise: white, round cotton-ball head with the ears lost in it, short body, big
 // dark round eyes, a short snout poking out of the fluff, plume tail over the back.
 const BICHON: Breed = {
-  label: 'Bichon frise',
-  coat: { ...CREAM_WHITE, n: '#2A2628', e: '#2A2220', i: '#EBC6C0', t: '#E7838F', ink: '#3A4048' },
+  coat: { ...CREAM_WHITE, n: '#2A2628', e: '#2A2220', i: '#EBC6C0', ink: '#3A4048' },
   tail: pic(7, [
     '....b.bb',
     '...bbbbbb',
@@ -294,61 +298,59 @@ const BICHON: Breed = {
   neck: [-1, 2],
 }
 
-// Maltese: white long silky coat hanging close to the ground, legs mostly hidden, drop ears
-// of long hair, a small top-knot bow, dark eyes.
-const MALTESE: Breed = {
-  label: 'Maltese',
-  coat: { ...WHITE, n: '#2A2628', e: '#2A2220', i: '#EBC6C0', t: '#E7838F', ink: '#3A4048' },
-  tail: pic(5, [
+// Australian shepherd, blue merle: an athletic medium dog with a feathered coat. Blue-grey
+// merle marbled with dark patches and a few lighter spots, white blaze, chest, collar and legs,
+// tan points over the eye and on the cheek and lower legs, one pale blue eye. The ears fold
+// forward at the tips and the tail is a short natural bob, which separates it from the husky.
+const AUSSIE: Breed = {
+  coat: {
+    o: '#3A424C', s: '#657282', b: '#8C9BAA', h: '#B4C0CC',
+    patch: { o: '#8E8A84', s: '#D6D3CD', b: '#F5F2EC', h: '#FFFFFF' },
+    n: '#2A2B30', e: '#A9D2EE', i: '#B5763F', ink: '#2B323A',
+  },
+  tail: pic(10, [
+    '....bbb',
+    '...bbhbb',
+    '..bbbbbb',
     '...bbbbb',
-    '..bbhhhbbb',
-    '.bbhbbbbbbb',
-    '.bbs..sbbbb',
-    '.bb...sbbbb',
-    '..b...sbsbs',
   ]),
-  body: pic(2, [
-    '..................bb',
-    '.................bhbb',
-    '..............bbbbbbbbbb',
-    '.............bbbbbhhhhbb',
-    '.............bbsssbbbbbb',
-    '.............bsssssbbbbPEb',
-    '............bbsssssbbbbbbbbbnn',
-    '...........bbbsssssbbbbbbbbbbn',
-    '..........bbbbsssssbbbbbOOOb',
-    '.......bbbbbbbsssssbbbbbbb',
-    '.....bhhhhhhhhsssssbbbbbb',
-    '....bbbbbbbbbbsssssbbbbb',
-    '....bbbbbbbbbbssssssbbbb',
-    '...bbbbbbbbbbbbssssbbbbb',
-    '...bbbsbbbbbbbbbsbsbbbbbb',
-    '...bbbsbbbbbbsbbbbbbbbbb',
-    '..bbbbsbbbbbbsbbbbbbsbbb',
-    '..bbbbsbbbbbbsbbbbbbsbbbb',
-    '..bbbbsbbbbbbbsbbbbbbsbbb',
-    '..bbbbbsbbbbbbsbbbbbbsbbbb',
-    '.bbbbbbsbbbbbbbsbbbbbbsbbb',
-    '.b.bb.bbb.bb.bbb.bb.bbb.bb',
-  ]),
-  legs: legsFor({ top: 23, hind: 6, fore: 18, hindRows: HIND[3], foreRows: FORE[3], hindTones: { T: 'b', L: 'b', P: 'b' }, foreTones: { T: 'b', L: 'b', P: 'b' } }),
-  collar: [[13, 10, 'AA'], [13, 11, 'AAA'], [14, 12, 'AA'], [17, 12, 'AAA'], [19, 13, 'AAA'], [21, 14, 'g']],
-  arm: raised('b', 'b', 'h'),
-  devArm: reaching('b', 'b', 'h'),
+  body: tuck(pic(1, [
+    '....................bbbbb',
+    '..............ssss.bObbbb',
+    '..............sss..biib',
+    '..............bbbbbbbbbbb',
+    '.............bbbbbbhhbbbww',
+    '.............bbOObbbbbbiiw',
+    '.............bbbOOObbbbOEPw',
+    '.............bbbbbbbbiiiwwwwwnn',
+    '............bbbbbbbbiiibbbbbwwn',
+    '...........bbbbbbbbiibbbbssssw',
+    '.......bbbbbwwwbbbbbwwwwwwwww',
+    '......bbbbhbbwwwbbbbbwwww',
+    '.....bbbOObbhbbwwwwwwwwww',
+    '....bbOObbhbbbOOObwwwwwww',
+    '.....bbbbObbbhbbOObwwwwwww',
+    '....bbOOObbbbObbhbwwbwwww',
+    '.....sbbObbbbbbOObbwwwwwww',
+    '......ssssbbbOObbhwwwwwwww',
+    '.......vwwwwwwwwwwwwwwww',
+  ]), 13, 16),
+  legs: legsFor({ top: 19, hind: 5, fore: 18, hindRows: AUSSIE_HIND, foreRows: FORE[7], hindTones: { T: 'b', L: 'w', P: 'w', F: 'i' }, foreTones: { T: 'w', L: 'w', P: 'w' } }),
+  collar: [[14, 9, 'AAA'], [14, 10, 'AAA'], [15, 11, 'AAAA'], [16, 12, 'AAAAAA'], [20, 13, 'g']],
+  arm: raised('w', 'w', 'u'),
+  devArm: reaching('w', 'w', 'u'),
   head: [0, 0],
-  eye: [-1, 0],
+  eye: [0, 0],
   neck: [0, 0],
-  topknot: [[18, 1, 'rRr'], [19, 2, 'R']],
 }
 
 // Shiba inu: red with cream urajiro on the cheeks, throat, chest, belly and inside the
 // legs, small thick triangular ears, a tight curled tail over the back, dark almond eyes.
 const SHIBA: Breed = {
-  label: 'Shiba inu',
   coat: {
     o: '#7E3A16', s: '#BF6526', b: '#DE8A3E', h: '#EEA963',
     patch: { o: '#A08766', s: '#E3CDA8', b: '#F4E4C6', h: '#FBF1DD' },
-    n: '#2A2224', e: '#3A2418', i: '#F4E4C6', t: '#E07A85', ink: '#3A2A20',
+    n: '#2A2224', e: '#3A2418', i: '#F4E4C6', ink: '#3A2A20',
   },
   tail: pic(4, [
     '.....bbbb',
@@ -390,20 +392,17 @@ const SHIBA: Breed = {
   neck: [0, 0],
 }
 
-const BREED_TABLE: Record<string, Breed> = { corgi: CORGI, husky: HUSKY, samoyed: SAMOYED, bichon: BICHON, maltese: MALTESE, shiba: SHIBA }
+const BREED_TABLE: Record<string, Breed> = { corgi: CORGI, husky: HUSKY, pomeranian: POMERANIAN, bichon: BICHON, aussie: AUSSIE, shiba: SHIBA }
 
-export const BREEDS: readonly string[] = Object.keys(BREED_TABLE)
-export const BREED_LABELS: Readonly<Record<string, string>> = Object.fromEntries(BREEDS.map(k => [k, BREED_TABLE[k].label]))
-
-// FNV-1a so the same agent id always gets the same breed across redraws and sessions.
-export const breedOf = (key: string): string => {
-  if (!key) return BREEDS[0]
-  let h = 0x811c9dc5
-  for (let i = 0; i < key.length; i++) {
-    h ^= key.charCodeAt(i)
-    h = Math.imul(h, 0x01000193) >>> 0
-  }
-  return BREEDS[h % BREEDS.length]
+// The role picks the breed, so a glance at the silhouette says what the dog is doing.
+// Any role without an entry draws as 'plain'.
+const ROLE_BREED: Record<string, string> = {
+  conductor: 'pomeranian',
+  builder: 'corgi',
+  fixer: 'shiba',
+  tester: 'bichon',
+  scout: 'husky',
+  plain: 'aussie',
 }
 
 // --- costumes ------------------------------------------------------------------------------
@@ -411,7 +410,7 @@ export const breedOf = (key: string): string => {
 // `at` moves a layer with the breed's head, eye or throat; other layers sit at the paw.
 // `ground` props rest on the floor, so they stay out of the walking bob.
 type Layer = { segs: Seg[]; g?: string; map?: Record<string, string>; at?: 'head' | 'eye' | 'neck'; ground?: boolean }
-type Costume = { hold?: boolean; hat?: boolean; layers: Layer[]; anim: string }
+type Costume = { hold?: boolean; layers: Layer[]; anim: string }
 
 const PROP: Record<string, string> = {
   k: '#3D4752', // dark prop body
@@ -454,7 +453,7 @@ const COSTUMES: Record<string, Costume> = {
     ],
     anim: '.p-dogs .d-builder.run .cur{animation:dogs-blink 1s steps(1) infinite}',
   },
-  // tester: spectacles + clipboard; the boxes check in one by one
+  // tester: spectacles + test tube; a bubble blinks in the liquid
   tester: {
     hold: true,
     layers: [
@@ -465,30 +464,25 @@ const COSTUMES: Record<string, Costume> = {
         segs: [[23, 6, 'kkkk'], [18, 7, 'kkkkkk'], [26, 7, 'k'], [23, 8, 'k'], [26, 8, 'k'], [23, 9, 'kkkk']],
       },
       {
-        // a narrow board gripped at its top-left corner by the pad; a steel clip on top,
-        // three list lines, each with a box that a check fills in
+        // a glass test tube gripped near its lip by the pad: tier-coloured rim, pale glass
+        // above, green liquid in the lower two thirds, a rounded bottom
         g: 'it',
-        map: { m: '#9AA0A8', P: '#F3F0E9', l: '#A9A9A3', x: '#D6D3CC', o: 'A' },
+        map: { P: '#D6EEF7', L: '#3FBF7F', o: 'A' },
         segs: [
-          [28, 16, 'mmm'],
-          [27, 17, 'ooooo'],
-          [27, 18, 'oPPPo'], [27, 19, 'oxllo'], [27, 20, 'oPPPo'], [27, 21, 'oxllo'],
-          [27, 22, 'oPPPo'], [27, 23, 'oxllo'], [27, 24, 'ooooo'],
+          [27, 15, 'ooooo'],
+          [27, 16, 'kPPPk'], [27, 17, 'kPPPk'], [27, 18, 'kPPPk'],
+          [27, 19, 'kLLLk'], [27, 20, 'kLLLk'], [27, 21, 'kLLLk'], [27, 22, 'kLLLk'], [27, 23, 'kLLLk'],
+          [28, 24, 'kkk'],
         ],
       },
-      { g: 'c1', map: { v: '#2E8B57' }, segs: [[28, 19, 'v']] },
-      { g: 'c2', map: { v: '#2E8B57' }, segs: [[28, 21, 'v']] },
-      { g: 'c3', map: { v: '#2E8B57' }, segs: [[28, 23, 'v']] },
+      // one lighter bubble in the liquid that blinks
+      { g: 'bb', map: { b: '#B8F0D0' }, segs: [[29, 20, 'b']] },
     ],
-    // one pass a second: blank, then each box checks in turn
-    anim: `.p-dogs .d-tester.run .c1{animation:dogs-t1 1s steps(1) infinite}
-.p-dogs .d-tester.run .c2{animation:dogs-t2 1s steps(1) infinite}
-.p-dogs .d-tester.run .c3{animation:dogs-t3 1s steps(1) infinite}`,
+    anim: '.p-dogs .d-tester.run .bb{animation:dogs-blink 1s steps(1) infinite}',
   },
-  // fixer: flat cap + wrench; the wrench works up and down
+  // fixer: flat cap + mallet; the mallet taps up and down
   fixer: {
     hold: true,
-    hat: true,
     layers: [
       {
         // ear tips poke out above the cap; the brim juts past the brow
@@ -497,10 +491,11 @@ const COSTUMES: Record<string, Costume> = {
         segs: [[18, 3, r('H', 7)], [17, 4, r('h', 9)], [17, 5, r('h', 9)], [26, 5, 'ddd']],
       },
       {
-        // an open-ended wrench held upright in the paw, jaw up
+        // a peppermint mallet held upright in the paw: wooden handle into a squared, outlined
+        // head with red-and-white candy stripes
         g: 'it',
-        map: { s: '#8C96A3', S: '#5F6874' },
-        segs: [[28, 15, 's..s'], [28, 16, 's..s'], [28, 17, 'ssss'], [29, 18, 'sS'], [29, 19, 'sS'], [29, 20, 'sS'], [29, 21, 'sS'], [29, 22, 'sS'], [29, 23, 'sS']],
+        map: { O: '#7A0C1E', R: '#C8102E', W: '#F6F2EA', o: '#8A5A2B' },
+        segs: [[27, 14, 'OOOOO'], [27, 15, 'ORWRO'], [27, 16, 'OWRWO'], [27, 17, 'OOOOO'], [29, 18, 'oo'], [29, 19, 'oo'], [29, 20, 'oo'], [29, 21, 'oo'], [29, 22, 'oo'], [29, 23, 'oo']],
       },
     ],
     anim: '.p-dogs .d-fixer.run .it{animation:dogs-st .5s steps(1) infinite}',
@@ -508,7 +503,6 @@ const COSTUMES: Record<string, Costume> = {
   // conductor: top hat in front of the ears + bow tie + baton; the baton beats between two poses
   conductor: {
     hold: true,
-    hat: true,
     layers: [
       {
         at: 'head',
@@ -523,10 +517,9 @@ const COSTUMES: Record<string, Costume> = {
     ],
     anim: '',
   },
-  // scout: bandana + eye patch + spyglass
+  // scout: bandana + eye patch + flashlight; the beam flickers
   scout: {
     hold: true,
-    hat: true,
     layers: [
       {
         // tied across the brow under the ears, the knot trailing behind
@@ -535,11 +528,21 @@ const COSTUMES: Record<string, Costume> = {
         segs: [[14, 4, r('r', 11)], [13, 5, 'rrrWrrrrrWrrr'], [12, 4, 'rr'], [11, 5, 'rr'], [11, 6, 'r']],
       },
       { at: 'eye', map: { k: 'ink' }, segs: [[19, 6, 'kkkk'], [23, 6, 'kkk'], [23, 7, 'kkk'], [23, 8, 'kkk']] },
-      // a brass spyglass held level, the wide end out front; the lens glints
-      { map: { B: '#BBD2F2' }, segs: [[30, 14, 'kk'], [29, 15, 'kyy'], [28, 16, 'yyyB'], [28, 17, 'oooB'], [29, 18, 'koo'], [30, 19, 'kk']] },
-      { g: 'gl', map: { G: '#FFFFFF' }, segs: [[31, 16, 'G']] },
+      // a short brass flashlight held level, a 3 px barrel gripped in the paw, the wide end out front; the lens glints
+      { map: { B: '#BBD2F2' }, segs: [[29, 14, 'k'], [27, 15, 'kky'], [27, 16, 'yyB'], [27, 17, 'ooB'], [27, 18, 'kko'], [29, 19, 'k']] },
+      { g: 'gl', map: { G: '#FFFFFF' }, segs: [[29, 16, 'G']] },
+      // the beam: a stepped cone 6 px long, 2, 4 then 6 px tall, bright core fading outward
+      { g: 'b1', map: { c: '#FFF3B0' }, segs: [[30, 16, 'cc'], [30, 17, 'cc']] },
+      { g: 'b2', map: { c: '#FFE680' }, segs: [[32, 15, 'cc'], [32, 16, 'cc'], [32, 17, 'cc'], [32, 18, 'cc']] },
+      { g: 'b3', map: { c: '#FFD54A' }, segs: [[34, 14, 'cc'], [34, 15, 'cc'], [34, 16, 'cc'], [34, 17, 'cc'], [34, 18, 'cc'], [34, 19, 'cc']] },
     ],
-    anim: '.p-dogs .d-scout.run .gl{animation:dogs-blink 1s steps(1) infinite}',
+    anim: `.p-dogs .d-scout.run .gl{animation:dogs-blink 1s steps(1) infinite}
+.p-dogs .d-scout .b1{opacity:.9}
+.p-dogs .d-scout .b2{opacity:.65}
+.p-dogs .d-scout .b3{opacity:.4}
+.p-dogs .d-scout.run .b1{animation:dogs-f1 1s steps(1) infinite}
+.p-dogs .d-scout.run .b2{animation:dogs-f2 1s steps(1) infinite}
+.p-dogs .d-scout.run .b3{animation:dogs-f3 1s steps(1) infinite}`,
   },
   // plain: no costume; the collar carries the colour
   plain: { layers: [], anim: '' },
@@ -563,7 +566,7 @@ const paint = (name: string, breed: Breed, accent: string, tail: Seg[]): Map<str
   const grid: (Cell | null)[][] = Array.from({ length: DOG_H }, () => Array(DOG_W).fill(null))
   const inside = (x: number, y: number) => x >= 0 && x < DOG_W && y >= 0 && y < DOG_H
   const look = (ch: string): [string, Tones] | undefined => {
-    const c = ({ b: coat.b, s: coat.s, h: coat.h, n: coat.n, i: coat.i, t: coat.t, E: coat.e, P: '#1E1A1C', G: '#FFFFFF', O: coat.o } as Record<string, string>)[ch]
+    const c = ({ b: coat.b, s: coat.s, h: coat.h, n: coat.n, i: coat.i, E: coat.e, P: '#1E1A1C', G: '#FFFFFF', O: coat.o } as Record<string, string>)[ch]
     if (c) return [c, coat]
     const p = ({ w: patch.b, v: patch.s, u: patch.h, Q: patch.o } as Record<string, string>)[ch]
     if (p) return [p, patch]
@@ -635,7 +638,6 @@ const paint = (name: string, breed: Breed, accent: string, tail: Seg[]): Map<str
       })
   }
   put(breed.collar, 'bd')
-  if (breed.topknot && !costume.hat) put(breed.topknot, 'bd', { r: '#E36F93', R: '#B8456A' })
   for (const layer of costume.layers) put(layer.segs, layer.g ?? 'bd', layer.map, layer.at === 'head' ? (breed.hats?.[name] ?? breed.head) : layer.at ? breed[layer.at] : [0, 0])
 
   // The lifted paw goes on last. It passes in front of the chest, so it is outlined against
@@ -703,9 +705,9 @@ const DOG_CSS = `<style>
 @keyframes dogs-off{50%{opacity:0}}
 @keyframes dogs-on{50%{opacity:1}}
 @keyframes dogs-blink{50%{opacity:.25}}
-@keyframes dogs-t1{0%{opacity:0}25%{opacity:1}}
-@keyframes dogs-t2{0%{opacity:0}50%{opacity:1}}
-@keyframes dogs-t3{0%{opacity:0}75%{opacity:1}}
+@keyframes dogs-f1{50%{opacity:.75}}
+@keyframes dogs-f2{50%{opacity:.5}}
+@keyframes dogs-f3{50%{opacity:.25}}
 ${Object.values(COSTUMES).map(c => c.anim).filter(Boolean).join('\n')}
 @media (prefers-reduced-motion: reduce){.p-dogs .run,.p-dogs .run g{animation:none!important}}
 </style>`
@@ -723,13 +725,11 @@ const inner = (costume: string, breed: string, accent: string): string => {
   return hit
 }
 
-export const COSTUME_NAMES: readonly string[] = Object.keys(COSTUMES)
-
 // `mirror` flips the dog inside its own box (x .. x + DOG_W * scale) so it faces left.
 // The dogs dress by role; the tier only reaches them through the accent colour.
 const draw = (x: number, y: number, who: { role: Role; tier: Tier }, o: DrawOptions): string => {
   const name = Object.prototype.hasOwnProperty.call(COSTUMES, who.role) ? who.role : 'plain'
-  const breed = BREED_TABLE[o.variant] ? o.variant : BREEDS[0]
+  const breed = ROLE_BREED[name]
   const scale = o.scale ?? 1
   const place = o.mirror ? `translate(${x + DOG_W * scale},${y}) scale(${-scale},${scale})` : `translate(${x},${y}) scale(${scale})`
   return `<g class="p-dogs"><g transform="${place}" opacity="${o.dim ? 0.45 : 1}" shape-rendering="crispEdges"><g class="dog d-${name}${o.isWalking ? ' run' : ''}">${inner(name, breed, o.accent)}</g></g></g>`
@@ -742,7 +742,5 @@ export const dogs: Pack = {
   h: DOG_H,
   css: DOG_CSS,
   roles: ROLES,
-  variants: BREEDS,
-  variantOf: breedOf,
   draw,
 }

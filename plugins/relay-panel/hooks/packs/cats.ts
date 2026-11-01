@@ -1,14 +1,16 @@
-// Pixel British Shorthair cats in profile, 32x28 grid units, drawn as SVG rects.
-//
-// Built from the breed standard: round massive head, medium ears set far apart, short
-// thick neck, level back, deep chest, short legs, thick tail. The silhouette reads with
-// no interior detail because every cat gets a generated outline in a darker shade of
-// its own coat. The collar always carries the accent colour, in the same place.
+// Cats: pixel British Shorthair cats in profile, drawn as SVG rects (dogs.ts is the sibling).
+// Cast: conductor lilac-point (top hat, bow tie, baton), builder cream-van (headphones, laptop),
+//   fixer cream-white (flat cap, mallet), tester white (spectacles, test tube),
+//   scout cream (bandana, eye patch, flashlight), plain blue-white (collar only).
+//   Every role has one fixed look; the seed is ignored.
+// Accent: the collar, plus each costume's main piece (hat band, headphones, cap, tube rim, bandana).
+// Box: 36x28 grid units; the cat sits two rows down so tall hats fit above it.
+// Animation: CSS only; legs step, the body bobs, the tail swishes between two pixel poses.
 
 import { type DrawOptions, type Pack, type Role, ROLES, type Tier } from './types'
 
-export const CAT_W = 32
-export const CAT_H = 28
+const CAT_W = 36
+const CAT_H = 28
 const DY = 2 // the cat sits two rows down so tall hats fit above it
 
 // --- coats ---------------------------------------------------------------------------------
@@ -25,7 +27,6 @@ const LILAC: Tones = { o: '#65545D', s: '#9C8893', b: '#B9A6AF', h: '#CDBCC4' }
 const CREAM: Tones = { o: '#9A7B52', s: '#D6B47F', b: '#EBD09F', h: '#F5E2BF' }
 
 const COATS: Record<string, Coat> = {
-  blue: { o: '#46525F', s: '#6F8091', b: '#8C9DAD', h: '#A8B7C5', m: '#B8C4CF', n: '#5E6E7E', e: '#E58A2B', ink: '#2B323A' },
   white: { o: '#9A958D', s: '#D8D4CC', b: '#F3F1EC', h: '#FFFFFF', m: '#FFFFFF', n: '#E7A0A8', e: '#3D7FD9', ink: '#3A4048' },
   cream: { o: '#9A7B52', s: '#D8BB8D', b: '#EED8B2', h: '#F8EAD2', m: '#F8EAD2', n: '#E3A098', e: '#D9822B', ink: '#4A3A2A' },
   // white with a blue cap, saddle and tail
@@ -36,20 +37,16 @@ const COATS: Record<string, Coat> = {
   'cream-white': { ...WHITE, m: '#FFFFFF', n: '#E3A098', e: '#D9822B', ink: '#4A3A2A', patch: CREAM, pattern: 'bicolour' },
   // pale cream body with lilac ears, mask, legs and tail; pointed cats have blue eyes
   'lilac-point': { o: '#A59A8C', s: '#DED5C9', b: '#F4EEE6', h: '#FFFFFF', m: '#FFFFFF', n: '#C98E9F', e: '#5A8FE0', ink: '#3A2F35', patch: LILAC, pattern: 'point' },
-  fawn: { o: '#7B6556', s: '#B39A87', b: '#CDB7A4', h: '#DCC9B8', m: '#E4D5C8', n: '#D4A2A0', e: '#D9822B', ink: '#3F332B' },
 }
 
-export const COAT_NAMES: readonly string[] = Object.keys(COATS)
-
-// FNV-1a so the same agent id always wears the same coat across redraws and sessions.
-export const coatOf = (key: string): string => {
-  if (!key) return 'blue'
-  let h = 0x811c9dc5
-  for (let i = 0; i < key.length; i++) {
-    h ^= key.charCodeAt(i)
-    h = Math.imul(h, 0x01000193) >>> 0
-  }
-  return COAT_NAMES[h % COAT_NAMES.length]
+// The role picks the coat so a glance says what the cat is doing.
+const ROLE_COAT: Record<string, string> = {
+  conductor: 'lilac-point',
+  builder: 'cream-van',
+  fixer: 'cream-white',
+  tester: 'white',
+  scout: 'cream',
+  plain: 'blue-white',
 }
 
 // Which pixels wear the second tone, in the cat's own coordinates (before DY). Bicolour:
@@ -193,7 +190,7 @@ const COSTUMES: Record<string, Costume> = {
     ],
     anim: '.p-cats .c-builder.run .cur{animation:cats-blink 1s steps(1) infinite}',
   },
-  // tester: spectacles + clipboard; the boxes check in one by one
+  // tester: spectacles + test tube; a bubble blinks in the liquid
   tester: {
     hold: true,
     layers: [
@@ -203,27 +200,23 @@ const COSTUMES: Record<string, Costume> = {
         segs: [[24, 7, 'kkkkk'], [19, 8, 'kkkkk'], [28, 8, 'k'], [24, 9, 'k'], [28, 9, 'k'], [24, 10, 'k'], [28, 10, 'k'], [24, 11, 'kkkkk']],
       },
       {
-        // a narrow board gripped at its left edge by the paw; a steel clip on top, three
-        // list lines, each with a box that a check fills in
+        // a glass test tube held upright in the paw: a lip in the accent colour, pale glass,
+        // green liquid filling the lower two thirds, a rounded bottom
         g: 'it',
-        map: { m: '#9AA0A8', P: '#F3F0E9', l: '#A9A9A3', x: '#D6D3CC', o: 'A' },
+        map: { w: '#D6EEF7', v: '#3FBF7F', A: 'A' },
         segs: [
-          [28, 15, 'mmm'],
-          [27, 16, 'ooooo'],
-          [27, 17, 'oPPPo'], [27, 18, 'oxllo'], [27, 19, 'oPPPo'], [27, 20, 'oxllo'],
-          [27, 21, 'oPPPo'], [27, 22, 'oxllo'], [27, 23, 'oPPPo'], [27, 24, 'ooooo'],
+          [27, 15, 'AAAAA'],
+          [28, 16, 'kwk'], [28, 17, 'kwk'], [28, 18, 'kwk'],
+          [28, 19, 'kvk'], [28, 20, 'kvk'], [28, 21, 'kvk'], [28, 22, 'kvk'], [28, 23, 'kvk'],
+          [28, 24, '.k.'],
         ],
       },
-      { g: 'c1', map: { v: '#2E8B57' }, segs: [[28, 18, 'v']] },
-      { g: 'c2', map: { v: '#2E8B57' }, segs: [[28, 20, 'v']] },
-      { g: 'c3', map: { v: '#2E8B57' }, segs: [[28, 22, 'v']] },
+      { g: 'c1', map: { b: '#B8F0D0' }, segs: [[29, 21, 'b']] },
     ],
-    // one pass a second: blank, then each box checks in turn
-    anim: `.p-cats .c-tester.run .c1{animation:cats-t1 1s steps(1) infinite}
-.p-cats .c-tester.run .c2{animation:cats-t2 1s steps(1) infinite}
-.p-cats .c-tester.run .c3{animation:cats-t3 1s steps(1) infinite}`,
+    // a bubble in the liquid blinks
+    anim: '.p-cats .c-tester.run .c1{animation:cats-blink 1s steps(1) infinite}',
   },
-  // fixer: flat cap + wrench; the wrench works up and down
+  // fixer: flat cap + mallet; the mallet taps up and down
   fixer: {
     hold: true,
     layers: [
@@ -233,10 +226,11 @@ const COSTUMES: Record<string, Costume> = {
         segs: [[17, 3, r('H', 12)], [16, 4, r('h', 14)], [16, 5, r('h', 16)], [28, 6, 'dddd']],
       },
       {
-        // an open-ended wrench held upright in the paw, jaw up
+        // a peppermint mallet held upright in the paw, head up: a wooden handle into a squared,
+        // outlined head with red and white candy stripes
         g: 'it',
-        map: { s: '#8C96A3', S: '#5F6874' },
-        segs: [[28, 16, 's..s'], [28, 17, 's..s'], [28, 18, 'ssss'], [29, 19, 'sS'], [29, 20, 'sS'], [29, 21, 'sS'], [29, 22, 'sS'], [29, 23, 'sS'], [29, 24, 'sS']],
+        map: { O: '#7A0C1E', R: '#C8102E', W: '#F6F2EA', o: '#8A5A2B' },
+        segs: [[27, 15, 'OOOOO'], [27, 16, 'ORWRO'], [27, 17, 'OWRWO'], [27, 18, 'OOOOO'], [28, 19, 'oo'], [28, 20, 'oo'], [28, 21, 'oo'], [28, 22, 'oo'], [28, 23, 'oo'], [28, 24, 'oo']],
       },
     ],
     anim: '.p-cats .c-fixer.run .it{animation:cats-st .5s steps(1) infinite}',
@@ -257,7 +251,7 @@ const COSTUMES: Record<string, Costume> = {
     ],
     anim: '',
   },
-  // scout: bandana + eye patch + spyglass
+  // scout: bandana + eye patch + flashlight; the beam flickers
   scout: {
     hold: true,
     layers: [
@@ -267,11 +261,20 @@ const COSTUMES: Record<string, Costume> = {
         segs: [[17, 4, r('r', 12)], [16, 5, 'rrrrWrrrrrrWrr'], [14, 4, 'rrr'], [13, 5, 'rrr'], [12, 6, 'rr'], [13, 7, 'r']],
       },
       { map: { k: 'ink' }, segs: [[19, 7, 'kkkkkk'], [25, 8, 'kkk'], [25, 9, 'kkk'], [25, 10, 'kkk']] },
-      // a brass spyglass held level, the wide end out front; the lens glints
-      { map: { B: '#BBD2F2' }, segs: [[30, 15, 'kk'], [29, 16, 'kyy'], [28, 17, 'yyyB'], [28, 18, 'oooB'], [29, 19, 'koo'], [30, 20, 'kk']] },
-      { g: 'gl', map: { G: '#FFFFFF' }, segs: [[31, 17, 'G']] },
+      // a brass flashlight held level, the lens glints
+      { map: { B: '#BBD2F2' }, segs: [[27, 16, 'kky'], [27, 17, 'yyB'], [27, 18, 'ooB'], [27, 19, 'kko']] },
+      // a stepped cone of light widens away from the lens: 2px, 4px then 6px tall, 2 columns each
+      { g: 'b1', map: { F: '#FFF3B0' }, segs: [[30, 17, 'FF'], [30, 18, 'FF']] },
+      { g: 'b2', map: { F: '#FFE680' }, segs: [[32, 16, 'FF'], [32, 17, 'FF'], [32, 18, 'FF'], [32, 19, 'FF']] },
+      { g: 'b3', map: { F: '#FFD54A' }, segs: [[34, 15, 'FF'], [34, 16, 'FF'], [34, 17, 'FF'], [34, 18, 'FF'], [34, 19, 'FF'], [34, 20, 'FF']] },
+      { g: 'gl', map: { G: '#FFFFFF' }, segs: [[28, 17, 'G']] },
     ],
-    anim: '.p-cats .c-scout.run .gl{animation:cats-blink 1s steps(1) infinite}',
+    anim: `.p-cats .b1{opacity:.9}
+.p-cats .b2{opacity:.65}
+.p-cats .c-scout.run .gl{animation:cats-blink 1s steps(1) infinite}
+.p-cats .b3{opacity:.4}
+.p-cats .c-scout.run .b2{animation:cats-blink 1s steps(1) infinite}
+.p-cats .c-scout.run .b3{animation:cats-blink 1s steps(1) -.5s infinite}`,
   },
   // plain: no costume; the collar carries the colour
   plain: { layers: [], anim: '' },
@@ -413,9 +416,6 @@ const CAT_CSS = `<style>
 @keyframes cats-off{50%{opacity:0}}
 @keyframes cats-on{50%{opacity:1}}
 @keyframes cats-blink{50%{opacity:.25}}
-@keyframes cats-t1{0%{opacity:0}25%{opacity:1}}
-@keyframes cats-t2{0%{opacity:0}50%{opacity:1}}
-@keyframes cats-t3{0%{opacity:0}75%{opacity:1}}
 ${Object.values(COSTUMES).map(c => c.anim).filter(Boolean).join('\n')}
 @media (prefers-reduced-motion: reduce){.p-cats .run,.p-cats .run g{animation:none!important}}
 </style>`
@@ -437,7 +437,7 @@ const inner = (costume: string, coat: string, accent: string): string => {
 // The cats dress by role; the tier only reaches them through the accent colour.
 const draw = (x: number, y: number, who: { role: Role; tier: Tier }, o: DrawOptions): string => {
   const name = COSTUMES[who.role] ? who.role : 'plain'
-  const coat = COATS[o.variant] ? o.variant : 'blue'
+  const coat = ROLE_COAT[name]
   const scale = o.scale ?? 1
   const place = o.mirror ? `translate(${x + CAT_W * scale},${y}) scale(${-scale},${scale})` : `translate(${x},${y}) scale(${scale})`
   return `<g class="p-cats"><g transform="${place}" opacity="${o.dim ? 0.45 : 1}" shape-rendering="crispEdges"><g class="c-${name}${o.isWalking ? ' run' : ''}">${inner(name, coat, o.accent)}</g></g></g>`
@@ -450,7 +450,5 @@ export const cats: Pack = {
   h: CAT_H,
   css: CAT_CSS,
   roles: ROLES,
-  variants: COAT_NAMES,
-  variantOf: coatOf,
   draw,
 }
