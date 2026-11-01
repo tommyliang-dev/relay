@@ -82,7 +82,6 @@ test('desktop: a running relay worker draws as a cat in its costume', async ($, 
   on('settings.read', async () => ({ value: {} }) as never)
   on('session.start', async () => ({ cwd: '/repo' }) as never)
   on('tool.register', (_$, e) => ({ value: { tool: String((e as { name?: string }).name) } }) as never)
-  on('command.register', (_$, e) => ({ value: { command: String((e as { name?: string }).name) } }) as never)
   on('ui.open', () => ({ value: { isPlaced: true } }))
   on('agent.spawn', () => ({ model: 'claude-opus-5-5', agentId: 'a1' }))
   on('turn.complete', () => ({ text: '' }) as never)
@@ -113,7 +112,6 @@ test('desktop: a worker wears the role of its planned task', async ($, on) => {
     schemas[String(name)] = inputSchema
     return { value: { tool: String(name) } } as never
   })
-  on('command.register', (_$, e) => ({ value: { command: String((e as { name?: string }).name) } }) as never)
   on('ui.open', () => ({ value: { isPlaced: true } }))
   on('agent.spawn', () => ({ model: 'claude-opus-5-5', agentId: 'a1' }))
   on('turn.complete', () => ({ text: '' }) as never)
@@ -156,7 +154,6 @@ test('desktop: the tier fable is read as expert, in plans and in agent types', a
     schemas[String(name)] = inputSchema
     return { value: { tool: String(name) } } as never
   })
-  on('command.register', (_$, e) => ({ value: { command: String((e as { name?: string }).name) } }) as never)
   on('ui.open', () => ({ value: { isPlaced: true } }))
   on('agent.spawn', () => ({ model: 'claude-opus-5-5', agentId: 'a1' }))
   on('turn.complete', () => ({ text: '' }) as never)

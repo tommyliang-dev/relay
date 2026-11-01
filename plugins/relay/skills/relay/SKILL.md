@@ -12,6 +12,8 @@ Task from the user: $ARGUMENTS
 
 If the arguments are empty, the task is whatever the user just asked in this conversation.
 
+**Panel subcommands.** If the task is exactly a relay-panel subcommand (`agents`, `agents open`, `preview`, `pack`, `pack <name>`, `pack shuffle [names]`, `pack seasonal on|off`), relay-panel did not catch it because it is not installed or not loaded. Tell the user to install or reload relay-panel, and do not orchestrate. Anything longer ("pack the release into a zip") is a normal task.
+
 ## 0. Preconditions
 
 - Orchestrate changes across several files or packages, new features, refactors, root-cause debugging, wide searches, and work that ends in a build or test run. Answer questions, explanations, quick lookups and edits a handful of tool calls can finish directly: a worker's startup cost exceeds the work.

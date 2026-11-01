@@ -1,6 +1,6 @@
 # relay: spec
 
-Describes relay 0.4.1 and relay-panel 0.6.0.
+Describes relay 0.4.2 and relay-panel 0.7.0.
 
 ## Goal
 
@@ -24,8 +24,8 @@ The repo is a marketplace named `relay` with two plugins.
 | Skill | `/savvy-flow` (manual only) | `/relay` (model-invocable, auto description from `savvy-flow-auto`) |
 | Workers | `savvy-light` … `savvy-fable` | `relay-light`, `relay-medium`, `relay-careful`, `relay-heavy`, `relay-expert` (formerly `relay-fable`; agent type `relay:relay-light` etc.) |
 | Tools | `mcp__savvy-progress__progress`, `__step` | `mcp__relay-panel__progress`, `mcp__relay-panel__step`, `mcp__relay-panel__pack` |
-| Panel command | `/agents-info` | `/relay-agents` (`open` argument kept) |
-| Pack command | none | `/relay-packs` (`/relay-pack` kept as a hidden alias) |
+| Panel command | `/agents-info` | `/relay agents [open]` (a `/relay` subcommand) |
+| Pack command | none | `/relay pack ...`, `/relay preview` (subcommands) |
 | Pane id / state plugin key | `savvy-agents` / `savvy-progress` | `relay-agents` / `relay-panel` |
 | Settings key | `pluginConfigs.savvy-progress` | `pluginConfigs.relay-panel` |
 
@@ -98,13 +98,13 @@ Adding a pack = one file + one line in the registry. `hooks/packs/packs.test.ts`
 
 Two settings and a shuffle option (since relay-panel 0.3.0; 0.2.x had one `auto` or pinned mode):
 
-- **Everyday pack**: a pack id, or `shuffle`. The `$.store` key `everyday`, then the plugin option `pack` ("Everyday pack": `clawd` default, `cats`, `dogs`, `winter`, `adventurers`, `shuffle`; a legacy `auto` reads as the default). Any registered id may be stored, holiday packs included (`/relay-packs turkeys` draws turkeys whenever no season shows).
+- **Everyday pack**: a pack id, or `shuffle`. The `$.store` key `everyday`, then the plugin option `pack` ("Everyday pack": `clawd` default, `cats`, `dogs`, `winter`, `adventurers`, `shuffle`; a legacy `auto` reads as the default). Any registered id may be stored, holiday packs included (`/relay pack turkeys` draws turkeys whenever no season shows).
 - **Seasons**: on or off. The store key `seasons` (boolean), then the option `seasons` (`on` default, `off`).
 - **Shuffle list**: the store key `shuffleList` (empty = every non-holiday pack).
 - **Skipped season**: the store key `skipSeason`, `'<seasonId>:<year the season starts>'` (`christmas:2026`), or absent. A key from a season that is over never matches; it is cleared at `session.start`.
 - **Last shuffle**: the store key `lastShuffle`, the previous pick.
 
-The store wins over the options. All keys persist across sessions, per plugin, written by the `pack` tool, `/relay-packs` and the gallery.
+The store wins over the options. All keys persist across sessions, per plugin, written by the `pack` tool, `/relay pack` and the gallery.
 
 **Holiday packs** are the packs in `SEASONS` (`hooks/packs/seasons.ts`, local time, inclusive):
 
@@ -139,13 +139,13 @@ Why not a settings key: writing `settings.json` from a mod is heavier, and the o
   - `set` with `id`: a pack id becomes the everyday pack (`ok: everyday pack is Pixel dogs`; in season `ok: Pixel dogs now; Christmas skipped until Dec 31`); `shuffle` shuffles every non-holiday pack; `auto` turns seasons on. An unknown id is refused, naming the valid ones.
   - `shuffle` with optional `ids`: everyday `shuffle` over those ids, with a fresh pick now and the same in-season skip. Holiday or unknown ids are refused, naming the valid ones.
   - `seasons` with `on`: holiday packs on or off (`ok: seasons off; showing Clawd`).
-  - `preview`: opens a `relay-packs` pane: the everyday cards first (clawd, cats, dogs, adventurers), then a "Seasonal" header, then the seasonal cards (winter, turkeys, christmas); each card shows every role in a row, walking. Labels: holiday cards "Holiday · Nov 15-30" / "Holiday · December", the everyday pack "Everyday", the one drawn now "Showing" (green). "Use" (on every card but the fixed everyday pack) sets the everyday pack.
-- **Slash command** `/relay-packs` (no args: list, everyday packs then a `seasonal:` group; `<id>`; `shuffle [ids…]`; `seasons on|off`; `auto` = seasons on; `preview`). `/relay-pack` still works as a hidden alias (not in the menu). `/relay-agents [open]` and `/relay-packs` show argument hints and run immediately, even mid-turn. Work without the model.
-- **Skill** `relay-packs` in the `relay-panel` plugin maps plain requests ("use dogs", "shuffle my sprites", "turn off holidays") to the tool. Model-only (`user-invocable: false`), so it does not appear in the slash menu or shadow the command.
+  - `preview`: opens the sprite pack gallery pane: the everyday cards first (clawd, cats, dogs, adventurers), then a "Seasonal" header, then the seasonal cards (winter, turkeys, christmas); each card shows every role in a row, walking. Labels: holiday cards "Holiday · Nov 15-30" / "Holiday · December", the everyday pack "Everyday", the one drawn now "Showing" (green). "Use" (on every card but the fixed everyday pack) sets the everyday pack.
+- **Slash commands** are subcommands of `/relay`, intercepted by relay-panel on `prompt.submit` (case-insensitive, exact grammar): `/relay agents [open]` (show/hide the panel; `open` only opens or brings it forward), `/relay preview` (gallery; `/relay pack preview` too), `/relay pack` (settings and list; also `pack list`), `/relay pack <name>` (everyday pack; loose names: cat → cats, crab → clawd, xmas → christmas, thanksgiving → turkeys; an unknown name replies with the pack list), `/relay pack shuffle [names]`, `/relay pack seasonal on|off` (`seasons` accepted; `pack auto` = on). An exact match runs instantly with no model turn; anything else (`/relay pack the release into a zip`, `/relay preview the deploy changes`) goes to the relay skill as a task. Why: a mod command cannot share a name with a skill (the skill wins, and a hidden skill then makes "isn't a command here"); 0.6.0's `relay-packs` skill shared its name with the `/relay-packs` command, which is why that command failed. Removed in 0.7.0: `/relay-agents`, `/relay-packs`, `/relay-pack` (no aliases).
+- **No pack skill.** relay-panel ships no skill (0.7.0 removed `relay-packs`). Plain requests ("use dogs", "shuffle my sprites", "turn off holidays") go to the `pack` tool, whose description says when to use it and whose `set` and `shuffle` take the same loose names as `/relay pack`.
 
 ## Verification
 
 - `claude plugin validate` on both plugins and the marketplace root.
 - `claude plugin test plugins/relay-panel`: the fork's tests ported (renamed tools and ids), plus `hooks/packs/packs.test.ts` (runs over every pack: every role draws, CSS scoped, width/height honoured), `hooks/packs/compact.test.ts` (compacted markup paints the same pixels) and a pack-swap test in `hooks/pack.test.ts` (set → atom changes → drawn SVG changes pack class).
 - Visual: `bun scripts/preview.ts` (or `npx tsx scripts/preview.ts`) renders each pack's gallery to `docs/preview/`; look at it in the browser, and at the live panel in Claude Code after swapping.
-- Install test: add the marketplace from the local path, install both, confirm tool names and `/relay-agents`, `/relay-packs` appear.
+- Install test: add the marketplace from the local path, install both, confirm the tool names, and that `/relay agents`, `/relay pack` and `/relay preview` run.
