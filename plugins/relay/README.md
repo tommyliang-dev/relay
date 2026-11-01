@@ -38,4 +38,4 @@ relay works on its own. With [relay-panel](../relay-panel) installed, the flow d
 claude plugin install relay@relay
 ```
 
-Add the marketplace first (`claude plugin marketplace add tommyliang-dev/relay`), then restart Claude Code. Copy-paste setup prompts, including one that picks a model preset for you, are in the [repository README](../../README.md).
+Add the marketplace first (`claude plugin marketplace add tommyliang-dev/relay`), then start a new session (restart Claude Code if `/relay` does not show up). In the Claude desktop app, paste a setup prompt instead: Claude runs the install with the app's own CLI. Copy-paste setup prompts, including one that picks a model preset for you, are in the [repository README](../../README.md).

@@ -14,7 +14,7 @@ plugins/
     hooks/register.tsx                 band, panel, tools (progress, step, pack), commands, gallery
     hooks/*.test.ts(x)                 panel, band, tools, cost and caller tests
     hooks/packs/types.ts               Pack, Role, Tier, DrawOptions
-    hooks/packs/index.ts               registry: packs, default pack, lookup
+    hooks/packs/index.ts               registry: packs (everyday first, then seasonal), default pack, lookup
     hooks/packs/seasons.ts             holiday table, pack resolution, shuffle
     hooks/packs/compact.ts             merges rect runs into paths so the gallery fits the pane limit
     hooks/packs/cats.ts                British Shorthair cats (six coats, by role)
@@ -27,7 +27,7 @@ plugins/
     hooks/packs/packs.test.ts          one test that runs over every pack
     hooks/packs/compact.test.ts        compacted markup paints the same pixels as the rects
     hooks/packs/seasons.test.ts        holiday table and pack resolution
-    skills/relay-pack/SKILL.md         list / preview / swap packs
+    skills/relay-packs/SKILL.md        list / preview / swap packs (model-only skill)
     types/index.d.ts                   panel state types
     README.md
 scripts/preview.ts                     renders the pack galleries into docs/preview/ (gitignored)
