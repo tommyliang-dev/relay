@@ -278,8 +278,9 @@ Help me make a new relay sprite pack:
 1. Read docs/SPRITES.md and plugins/relay-panel/hooks/packs/types.ts first.
 2. Build plugins/relay-panel/hooks/packs/<id>.ts, following an existing pack.
 3. Register it in plugins/relay-panel/hooks/packs/index.ts. An everyday pack also goes in the `pack` option's list in plugins/relay-panel/.claude-plugin/plugin.json; a holiday pack goes in SEASONS in plugins/relay-panel/hooks/packs/seasons.ts instead.
-4. Run `bun scripts/preview.ts`, open docs/preview/ and look at the pack before you call it done.
+4. Run `bun scripts/preview.ts` (or `npx tsx scripts/preview.ts` without bun), open docs/preview/ and look at the pack before you call it done.
 5. Run claude plugin test plugins/relay-panel.
+   If the `claude` or `bun` command is not found (for example in the Claude app), do not stop. Give me the exact commands to run in a terminal that has them, and wait for the result.
 ```
 
 ## Using it next to savvy
@@ -314,7 +315,9 @@ claude plugin validate plugins/relay-panel
 claude plugin test plugins/relay-panel
 ```
 
-How packs are built: `docs/SPRITES.md`. Pack galleries: `bun scripts/preview.ts` writes them to `docs/preview/` (not committed).
+These need the `claude` command in a terminal. The Claude app's `/plugin` commands cover install, update and uninstall only, so in the app run validate and test from a terminal that has the CLI.
+
+How packs are built: `docs/SPRITES.md`. Pack galleries: `bun scripts/preview.ts` (or `npx tsx scripts/preview.ts`) writes them to `docs/preview/` (not committed).
 
 ## License
 

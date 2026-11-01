@@ -14,9 +14,8 @@
 //
 // Motion (only while running, off under prefers-reduced-motion): everyone steps in place (`la` /
 // `lb` legs half a cycle apart) with a body bob (`bd`). On top: the magician's orb pulses (halo
-// and hot core blink on); the Thief's daggers swap between crossed and swung out while a glint
-// runs along them (`g1`..`g4`), his eyes pulse, shadow wisps rise, the coat hem and the shadow
-// soldiers behind him sway; the knight raises the sword a step while a glint (`gl`) climbs the
+// and hot core blink on); the Thief's daggers swing in turn at his sides while a glint
+// runs along the blades (`ga` / `gb`), his eyes pulse, shadow wisps rise, the coat hem sways; the knight raises the sword a step while a glint (`gl`) climbs the
 // blade; the healer's tome bobs with its glow while plus signs and sparkles rise and fade above
 // it (`s1`..`s3`); the archer's fire arrow flickers between two flame frames with a white-hot
 // core; the ninja's eyes twinkle and the tail of the headband flutters.
@@ -62,8 +61,7 @@ type Part = { g: string; segs: Seg[] }
 // A layer is painted on its own grid, so it gets its own outline and can move without leaving a
 // hole in what is under it. `flat` layers are plain colour pixels (glows, glints, flames).
 type Layer = { g: string; in?: string; segs: Seg[]; flat?: Record<string, string> }
-// `back` layers are flat and drawn behind everything, legs included (the Thief's shadow soldiers).
-type Figure = { ink: Record<string, Ink>; base: Part[]; layers: Layer[]; back?: Layer[] }
+type Figure = { ink: Record<string, Ink>; base: Part[]; layers: Layer[] }
 
 const HALF = ADV_W / 2
 const flip = (s: string) => [...s].reverse().join('')
@@ -121,42 +119,34 @@ const magician = (A: Ink): Figure => ({
 })
 
 // ---- thief (builder) -------------------------------------------------------------------------
-// A pixel tribute to Sung Jinwoo of Solo Leveling, the Shadow Monarch, as a chibi shadow assassin.
-// Traits confirmed on the Solo Leveling wiki (solo-leveling.fandom.com):
-// - Sung_Jinwoo, Appearance: tall and muscular; gray eyes that glow purple when he uses his powers;
-//   sharp features; black hair with bangs that hang down to his eyes; favours dark clothing, from
-//   tailored suits to long hooded coats.
-// - Demon_King's_Daggers (his main pair): large black daggers with brown hilts and red guards; in
-//   his hands their edges glow light purple.
-// - Igris: jet-black armour from head to toe, a light purple glow, a tattered black cape and a long
-//   red plume from the back of the helmet. Beru: a huge humanoid shadow ant with a light purple
-//   glow, neon eyes, sharp claws and smoky wings.
-// Not confirmed in a source: a violet aura or wisps round Jinwoo himself (here a stylisation of
-// his shadows' glow) and the cut of the coat. The blades are dark with a light violet edge and a
-// glint after the Demon King's Daggers.
-// Drawn upright and unmasked: short, messy black hair (spikes on top, side-swept bangs touching
-// the brows, cut above the ears), violet eyes with a light glint, a straight dark hooded coat in
-// three flat tones with a violet rim down the right edge, a belt with a clasp in the accent (the
-// only tinted piece), a hem with three ragged points over visible boots. Twin daggers cross in
-// front of the chest, hands gripping the hilts at the bottom of the X: dark blades with a light
-// violet edge, red guards and brown hilts. Behind him stand two shadow soldiers with a lighter
-// violet rim: a plumed knight (Igris) on the left and an ant (Beru) on the right. Letters: H hair,
+// A chibi shadow assassin with twin reverse-grip daggers.
 // h shine, V rim, f skin, E lash, e eye, m mouth, C coat, T shirt, B belt, A clasp, j hand,
-// p trousers, b boot; flat: k blade, l edge, u hilt, r guard, W glint; n/v/e/r shadow soldier,
-// rim, eye and plume.
+// p trousers, b boot; flat: k blade, l edge, u hilt, r guard, j fist, W glint.
 const K0 = '#0D0A14'
 const THIEF_LEG: Seg[] = [[12, 26, 'ppp'], [12, 27, 'ppp'], [11, 28, 'bbbb'], [11, 29, 'bbbb']]
-const DAGGER = { k: '#2B2740', l: '#B9A0E8', u: '#6B4A32', r: '#B3262E' }
-// One dagger for the left hand; the right hand holds its mirror, drawn first so the left is in front.
-const pair = (segs: Seg[]): Seg[] => [...mirrorSegs(segs), ...segs]
+// The dagger after the reference: copper arrowhead pommel (p P), white grip (w s), a skin
+// fist (j), a copper horned guard (C c d) and a curved blade with a white edge down the outer side
+// (e), a violet face (v V), an orange engraving (g) and a deep violet outline (o).
+const DAGGER = {
+  p: '#E3A078', P: '#C4774A', w: '#F1EEE6', s: '#D9D4C8', j: '#E8C9A0',
+  C: '#E39B72', c: '#B8683F', d: '#8A4A2A', e: '#F4F2F8', v: '#7B6BA8', V: '#9A8CC9', g: '#C9784A', o: '#4A3F73',
+}
+// The left-hand dagger, fist and all, held in reverse grip with the blade hanging down and slanting
+// out and away from the body; the right hand holds its mirror.
+const DAG: Seg[] = [
+  [8, 13, 'p'], [7, 14, 'pPP'], [8, 15, 'w'], [8, 16, 's'], [7, 17, 'jwj'], [7, 18, 'jjj'],
+  [6, 18, 'C'], [10, 18, 'C'], [6, 19, 'Ccccd'], [7, 20, 'ccd'],
+  [6, 21, 'evv'], [6, 22, 'egv'], [5, 23, 'egv'], [5, 24, 'egv'], [4, 25, 'egv'], [4, 26, 'eVv'],
+  [3, 27, 'ev'], [3, 28, 'ev'], [2, 29, 'e'],
+  [5, 21, 'o'], [5, 22, 'o'], [4, 23, 'o'], [4, 24, 'o'], [3, 25, 'o'], [3, 26, 'o'], [2, 27, 'o'], [2, 28, 'o'], [1, 29, 'o'],
+]
 const VGLINT = { W: '#F1EAFF' }
-const SHADOW = { n: '#2A1F44', v: '#5E4B94', e: '#D6C6FF', r: '#B8283A' }
 const thief = (A: Ink): Figure => ({
   ink: {
     H: solid(K0), h: solid('#2B2540', 'H'), V: solid('#7A62C4', 'C'),
     f: tone('#E8C9A0', undefined, undefined, K0), E: solid(K0, 'f'), e: solid('#A57CFF', 'f'), m: solid('#B98A70', 'f'),
     C: tone('#1A1626', undefined, '#34294D', K0), T: tone('#2E2A3A', undefined, undefined, K0),
-    B: solid('#2B2540', 'C'), A: solid(A.c, 'C'), j: solid('#E8C9A0'),
+    B: solid('#2B2540', 'C'), A: solid(A.c, 'C'),
     p: tone('#15121F', undefined, undefined, K0), b: tone('#2B2540', undefined, undefined, K0),
   },
   base: [
@@ -167,7 +157,7 @@ const thief = (A: Ink): Figure => ({
         [9, 8, 'HffHHfHHHfHHfH'], [9, 9, 'fffEEffffEEfff'], [9, 10, 'fffeeffffeefff'], [10, 11, 'ffffffffffff'],
         [11, 12, 'ffffmmffff'], [9, 13, 'CCCffffffffCCC'],
         [8, 14, 'CCCCCCTTTTCCCCCC'], [8, 15, 'CCCCCCCTTCCCCCCC'], ...col(8, 16, 22, 'CCCCCCCCCCCCCCCC'),
-        [10, 21, 'jj........jj'], [10, 22, 'jj........jj'], [8, 23, 'BBBBBBAAAABBBBBB'], ...col(8, 24, 25, 'CCCCCCCCCCCCCCCC'),
+        [8, 23, 'BBBBBBAAAABBBBBB'], ...col(8, 24, 25, 'CCCCCCCCCCCCCCCC'),
         [12, 2, 'h'], [11, 3, 'hh'], [10, 4, 'hh'], [15, 2, 'hh'], [16, 3, 'h'],
         [21, 3, 'V'], ...col(22, 4, 8, 'V'), ...col(23, 14, 25, 'V'),
       ],
@@ -178,41 +168,15 @@ const thief = (A: Ink): Figure => ({
     { g: 'lb', segs: mirrorSegs(THIEF_LEG) },
   ],
   layers: [
-    // eye glints, daggers crossed (pose a) and raised apart in a V (pose b), a glint running up
-    // the edges in four steps, and wisps over the shoulders
+    // eye glints, the two daggers (each swings with its glint, which climbs the edge in four
+    // steps) and wisps over the shoulders
     { g: 'eg', flat: { W: '#F3ECFF' }, segs: [[12, 10, 'W......W']] },
-    {
-      g: 'da',
-      flat: DAGGER,
-      segs: pair([[12, 20, 'ur'], [12, 19, 'r'], [13, 19, 'kl'], [14, 18, 'kl'], [15, 17, 'kl'], [16, 16, 'kl'], [17, 15, 'kl'], [18, 14, 'kl']]),
-    },
-    { g: 'db', flat: DAGGER, segs: pair([[11, 20, 'u'], [10, 19, 'rrr'], ...col(11, 17, 18, 'kl'), ...col(10, 15, 16, 'kl'), [9, 14, 'kl']]) },
-    { g: 'g1', flat: VGLINT, segs: [[15, 18, 'WW']] },
-    { g: 'g2', flat: VGLINT, segs: [[12, 14, 'W'], [19, 14, 'W']] },
-    { g: 'g3', flat: VGLINT, segs: [[12, 17, 'W'], [19, 17, 'W']] },
-    { g: 'g4', flat: VGLINT, segs: [[10, 14, 'W'], [21, 14, 'W']] },
+    { g: 'dl', flat: DAGGER, segs: DAG },
+    { g: 'dr', flat: DAGGER, segs: mirrorSegs(DAG) },
+    { g: 'ga', in: 'dl', flat: VGLINT, segs: [[8, 21, 'W']] },
+    { g: 'gb', in: 'dr', flat: VGLINT, segs: [[23, 21, 'W']] },
     { g: 'w1', flat: { v: 'rgba(165,124,255,.6)' }, segs: [[8, 12, 'v'], [23, 11, 'v']] },
-  ],
-  back: [
-    // Igris: a helmet with a glowing visor slit and a red plume, pauldrons and a short body
-    {
-      g: 'sa',
-      flat: SHADOW,
-      segs: [
-        [1, 8, 'rr'], [1, 9, 'rnnn'], [1, 10, 'vnnnn'], [1, 11, 'vneen'], [1, 12, 'vnnnn'], [2, 13, 'nnn'],
-        [0, 14, 'vnnnnnn'], [0, 15, 'vnnnnnn'], ...col(1, 16, 19, 'vnnnn'), [1, 20, 'nn.nn'],
-      ],
-    },
-    // Beru: an ant's head with two antennae, two eyes and mandibles, on a narrow thorax
-    {
-      g: 'sb',
-      flat: SHADOW,
-      segs: [
-        [26, 6, 'n...n'], [27, 7, 'n.n'], [26, 8, 'nnnnn'], [25, 9, 'nnnnnnv'], [25, 10, 'neeneev'], [25, 11, 'nnnnnnv'],
-        [26, 12, 'nnnnv'], [26, 13, 'n...n'], [27, 14, 'nnn'], [25, 15, 'nnnnnnv'], ...col(26, 16, 19, 'nnnnv'), [26, 20, 'nn.nn'],
-      ],
-    },
-  ],
+  ]
 })
 
 // ---- knight (fixer) --------------------------------------------------------------------------
@@ -559,30 +523,27 @@ const svgFor = (fig: Figure): string => {
     const n = nodes.get(g)
     return n ? `<g class="${g}">${n.rects.join('')}${n.kids.map(render).join('')}</g>` : ''
   }
-  const back = (fig.back ?? []).map(l => `<g class="${l.g}">${flatRects(l.segs, l.flat ?? {}).join('')}</g>`).join('')
-  return `${back}${render('la')}${render('lb')}${render('bd')}`
+  return `${render('la')}${render('lb')}${render('bd')}`
 }
 
 // Pure CSS, run by the compositor: no redraws. Periods divide one second, so the once-a-second
 // redraw of a running row restarts them in phase. Hidden-by-default poses: `ob` / `oh` (orb
-// flare), `fb` (second flame), `s2` `s3` (sparkles), `db` (swung daggers) and `g2`..`g4` (glints).
+// flare), `fb` (second flame) and `s2` `s3` (sparkles).
 const P = '.p-adventurers'
 const R = `${P} .run`
 const ADV_CSS = `<style>
 ${R} g{transform-box:fill-box}
-${P} .ob,${P} .oh,${P} .fb,${P} .db,${P} .g2,${P} .g3,${P} .g4,${P} .s2,${P} .s3{opacity:0}
+${P} .ob,${P} .oh,${P} .fb,${P} .s2,${P} .s3{opacity:0}
 ${R} .la{animation:adventurers-st .5s steps(1) infinite}
 ${R} .lb{animation:adventurers-st .5s steps(1) infinite -.25s}
 ${R} .bd{animation:adventurers-bob .5s steps(1) infinite -.125s}
 ${R}.c-conductor .ob,${R}.c-conductor .oh{animation:adventurers-on 1s steps(1) infinite}
 ${R} .hm,${R} .sa{animation:adventurers-sway .5s steps(1) infinite}
 ${R} .sb{animation:adventurers-sway .5s steps(1) infinite -.25s}
-${R} .da{animation:adventurers-off 1s steps(1) infinite}
-${R} .db{animation:adventurers-on 1s steps(1) infinite}
-${R} .g1{animation:adventurers-q4 1s steps(1) infinite}
-${R} .g2{animation:adventurers-q4 1s steps(1) infinite -.75s}
-${R} .g3{animation:adventurers-q4 1s steps(1) infinite -.5s}
-${R} .g4{animation:adventurers-q4 1s steps(1) infinite -.25s}
+${R} .dl{animation:adventurers-arm 1s steps(1) infinite}
+${R} .dr{animation:adventurers-arm 1s steps(1) infinite -.5s}
+${R} .ga{animation:adventurers-gsa 1s steps(1) infinite}
+${R} .gb{animation:adventurers-gsb 1s steps(1) infinite}
 ${R} .eg{animation:adventurers-glow 1s ease-in-out infinite}
 ${R} .w1{animation:adventurers-rise 1s steps(1) infinite}
 ${R}.c-fixer .sw{animation:adventurers-raise 1s steps(1) infinite}
@@ -602,7 +563,9 @@ ${R} .tl{animation:adventurers-flap .5s steps(1) infinite}
 @keyframes adventurers-on{50%{opacity:1}}
 @keyframes adventurers-raise{50%{transform:translateY(-2px)}}
 @keyframes adventurers-sway{50%{transform:translateX(1px)}}
-@keyframes adventurers-q4{0%{opacity:1}25%,100%{opacity:0}}
+@keyframes adventurers-arm{50%{transform:translateY(-2px)}}
+@keyframes adventurers-gsa{25%{transform:translateY(2px)}50%{transform:translateY(4px)}75%{transform:translate(1px,6px)}}
+@keyframes adventurers-gsb{25%{transform:translateY(2px)}50%{transform:translateY(4px)}75%{transform:translate(-1px,6px)}}
 @keyframes adventurers-rise{33%{transform:translateY(-1px);opacity:.7}67%{transform:translateY(-2px);opacity:.35}}
 @keyframes adventurers-hover{50%{transform:translateY(-1px)}}
 @keyframes adventurers-glow{50%{opacity:.35}}

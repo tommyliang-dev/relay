@@ -82,7 +82,7 @@ Seven packs. For every pack the role picks the character (or costume, breed, col
 4. **turkeys** (holiday, Nov 15-30): one simple body; the role picks the heritage colour (conductor bronze, builder bourbon red, fixer slate, tester white holland, scout narragansett, plain royal palm). No breed silhouettes.
 5. **christmas** (holiday, December): one character per role: Santa, gingerbread with a peppermint mallet, nutcracker with the same mallet, Mrs Claus with a test tube, an elf with a lantern, reindeer. Santa, nutcracker and Mrs Claus have one look; gingerbread (dough), elf (tunic) and reindeer (coat) pick one of six looks from the seed.
 6. **winter**: front-facing snowman (conductor), yeti (builder), polar bear (fixer), snow owl (tester), arctic fox (scout), penguin (plain). No held props. 36x30.
-7. **adventurers**: front-facing magician with a glowing-orb staff (conductor), the Thief (builder; a shadow assassin with twin daggers and shadow soldiers, a pixel-art tribute to Sung Jin-Woo from Solo Leveling), knight with sword and shield (fixer), healer with a floating tome (tester), archer with a bow and fire arrow (scout), ninja (plain). 32x30.
+7. **adventurers**: front-facing magician with a glowing-orb staff (conductor), the Thief (builder; a shadow assassin with twin daggers, a pixel-art tribute to Sung Jin-Woo from Solo Leveling), knight with sword and shield (fixer), healer with a floating tome (tester), archer with a bow and fire arrow (scout), ninja (plain). 32x30.
 
 Shared props (cats, dogs, turkeys, christmas): fixers hold the peppermint mallet, testers a test tube, and scouts (cats, dogs, turkeys) a flashlight with a beam; the elf keeps its lantern. Clawd, winter and adventurers use their own props.
 
@@ -145,5 +145,5 @@ Why not a settings key: writing `settings.json` from a mod is heavier, and the o
 
 - `claude plugin validate` on both plugins and the marketplace root.
 - `claude plugin test plugins/relay-panel`: the fork's tests ported (renamed tools and ids), plus `hooks/packs/packs.test.ts` (runs over every pack: every role draws, CSS scoped, width/height honoured) and a pack-swap test in `hooks/pack.test.ts` (set → atom changes → drawn SVG changes pack class).
-- Visual: `bun scripts/preview.ts` renders each pack's gallery to `docs/preview/`; look at it in the browser, and at the live panel in Claude Code after swapping.
+- Visual: `bun scripts/preview.ts` (or `npx tsx scripts/preview.ts`) renders each pack's gallery to `docs/preview/`; look at it in the browser, and at the live panel in Claude Code after swapping.
 - Install test: add the marketplace from the local path, install both, confirm tool names and `/relay-agents`, `/relay-pack` appear.

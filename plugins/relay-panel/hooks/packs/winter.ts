@@ -107,10 +107,10 @@ const YETI_ARMS: Part[] = [
   },
 ]
 const yeti = (accent: string): Figure => {
-  const fur = '#46566A'
+  const fur = '#4F6680'
   return {
     ink: {
-      b: { c: '#B4C2D3', o: fur }, h: { c: '#E6EEF6', o: fur, z: 2 }, s: { c: '#8A9BB0', o: fur, z: 2 }, g: { c: '#8A9BB0', o: fur },
+      b: { c: '#F7FAFD', o: fur }, h: { c: '#D4E0EC', o: fur, z: 2 }, s: { c: '#C9D6E3', o: fur, z: 2 }, g: { c: '#C9D6E3', o: fur },
       f: { c: '#6F829B', o: fur, z: 2 }, F: { c: fur, z: 3 }, E: dot('#FFFFFF', 5), P: dot('#1E2530', 4), n: dot('#2A3340', 4),
       m: dot('#1E2530', 4), t: dot('#FFFFFF', 5), A: dot(accent, 2), a: dot(darker(accent), 4),
     },

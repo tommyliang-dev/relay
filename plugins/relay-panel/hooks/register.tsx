@@ -220,17 +220,16 @@ const isRtl = () => lang === 'he'
 // Tier and effort words as shown; anything unknown shows as it came.
 const tierWord = (tier: string): string => (tr().tier as Record<string, string>)[tier] ?? tier
 const effortWord = (effort: string): string => (tr().effort as Record<string, string>)[effort] ?? effort
-// The panel is English-only for role words: the role id is the label.
-const roleWord = (role: string): string => role
-
-// Second line of a row: role, tier (coloured), then the muted rest. When too wide the rest is dropped first, then the line is cut.
+// Second line of a row: the role in bold text (the role id is the label), the tier in its colour, then the muted rest.
+// Only the tier carries colour, so the role never competes with it. Planned rows are dimmed (`cls` is `m`).
+// When too wide the rest is dropped first, then the line is cut.
 const roleLine = (role: string, tierText: string, color: string, rest: string[], cls: string, maxW: number): string => {
-  const head = `${roleWord(role)}  ·  `
-  const full = `${head}${tierText}${rest.length ? '  ·  ' + rest.join('  ·  ') : ''}`
-  const tail = textWidth(full, 11) <= maxW ? rest : []
-  const line = `${head}${tierText}`
-  if (!tail.length && textWidth(line, 11) > maxW) return `<tspan class="${cls}">${xml(fitText(line, 11, maxW))}</tspan>`
-  return `<tspan class="${cls}">${xml(head)}</tspan><tspan fill="${color}">${xml(tierText)}</tspan>${tail.length ? `<tspan class="${cls}">  ·  ${xml(tail.join('  ·  '))}</tspan>` : ''}`
+  const sep = '  ·  '
+  const head = `${role}${sep}${tierText}`
+  const tail = textWidth(`${head}${rest.length ? sep + rest.join(sep) : ''}`, 11) <= maxW ? rest : []
+  if (!tail.length && textWidth(head, 11) > maxW) return `<tspan class="${cls}">${xml(fitText(head, 11, maxW))}</tspan>`
+  const roleCls = cls === 'm' ? 's' : 't'
+  return `<tspan class="${roleCls}" font-weight="600">${xml(role)}</tspan><tspan class="${cls}">${sep}</tspan><tspan fill="${color}">${xml(tierText)}</tspan>${tail.length ? `<tspan class="${cls}">${sep}${xml(tail.join(sep))}</tspan>` : ''}`
 }
 
 const isRussian = (v: unknown): boolean => typeof v === 'string' && /^(ru|russian|рус)/i.test(v.trim())
