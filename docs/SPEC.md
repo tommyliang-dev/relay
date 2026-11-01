@@ -1,6 +1,6 @@
 # relay: spec
 
-Describes relay 0.4.0 and relay-panel 0.6.0.
+Describes relay 0.4.1 and relay-panel 0.6.0.
 
 ## Goal
 
