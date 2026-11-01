@@ -49,7 +49,7 @@ Install relay for me:
    - /relay <task> runs a task through relay.
    - /relay-agents opens the agents panel.
    - /relay-pack lists the sprite packs; /relay-pack shuffle, /relay-pack seasons on|off and /relay-pack preview.
-   - The five sprite packs: cats, clawd, dogs, turkeys and christmas.
+   - The seven sprite packs: cats, clawd, dogs, winter, adventurers, turkeys and christmas.
    - Holiday packs show by themselves: turkeys Nov 15-30, Christmas in December, and my everyday pack the rest of the year (clawd unless I change it).
 ````
 
@@ -94,7 +94,7 @@ Install relay for me and make it my default way to delegate:
    - /relay <task> runs a task through relay.
    - /relay-agents opens the agents panel.
    - /relay-pack lists the sprite packs; /relay-pack shuffle, /relay-pack seasons on|off and /relay-pack preview.
-   - The five sprite packs: cats, clawd, dogs, turkeys and christmas.
+   - The seven sprite packs: cats, clawd, dogs, winter, adventurers, turkeys and christmas.
    - Holiday packs show by themselves: turkeys Nov 15-30, Christmas in December, and my everyday pack the rest of the year (clawd unless I change it).
 ````
 
@@ -170,22 +170,26 @@ expert runs on Opus 5.5 unless you choose Baller.
 
 Each sprite is dressed by its role. The main session is the conductor. When relay plans, it gives every task a role, and the worker running it wears that costume:
 
-| Role | Who | Cats wear |
-| --- | --- | --- |
-| conductor | the main session | top hat and baton |
-| builder | features and changes | headphones and laptop |
-| fixer | debugging, root cause | flat cap and wrench |
-| tester | builds, tests, checks | spectacles and clipboard |
-| scout | searching and reading code; also the Explore agent | pirate with a spyglass |
-| plain | any other subagent | collar only |
+| Role | Who |
+| --- | --- |
+| conductor | the main session |
+| builder | features and changes |
+| fixer | debugging, root cause |
+| tester | builds, tests, checks |
+| scout | searching and reading code; also the Explore agent |
+| plain | any other subagent |
 
-The tier colour tints the costume's main piece and the collar.
+The role picks the character (or the costume, breed or colour), so the job reads at a glance. The tier colour tints part of the costume. A few characters also get a random look, fixed for each task.
 
-- **cats**: British Shorthairs in 8 coats, dressed by role.
-- **clawd** (the default everyday pack): the original crab, dressed by tier instead of role.
-- **dogs**: corgi, husky, samoyed, bichon frise, maltese and shiba, dressed by role.
-- **turkeys** (holiday): six heritage breeds with fanned tails, dressed by role.
-- **christmas** (holiday): Santa conducts, a gingerbread man builds, a nutcracker fixes, Mrs Claus tests, an elf scouts with a lantern, and reindeer (Rudolph included) are everyone else.
+- **cats**: British Shorthairs. The role picks one of six coats.
+- **clawd** (the default everyday pack): the original crab, dressed by role: astronaut (conductor), engineer (builder), detective (fixer), racer (tester), pirate (scout), bare (plain).
+- **dogs**: the role picks the breed: Pomeranian (conductor), corgi (builder), shiba (fixer), bichon frise (tester), husky (scout), and Mabel the Australian shepherd (plain).
+- **winter**: a snowman conducts, a yeti builds, a polar bear fixes, a snowy owl tests, an arctic fox scouts, and penguins are everyone else.
+- **adventurers**: a magician conducts, a thief with twin daggers builds, a knight fixes, a healer tests, an archer scouts, and ninjas are everyone else.
+- **turkeys** (holiday): one turkey body; the role picks the heritage colour: bronze, bourbon red, slate, white holland, narragansett, royal palm.
+- **christmas** (holiday): Santa conducts, a gingerbread man builds, a nutcracker fixes, Mrs Claus tests, an elf scouts with a lantern, and reindeer are everyone else.
+
+In cats, dogs, turkeys and christmas, fixers hold a peppermint mallet and testers a test tube; scouts hold a flashlight (the christmas elf keeps its lantern).
 
 | Dates | Holiday pack |
 | --- | --- |
@@ -201,7 +205,7 @@ If you pick a pack during a holiday, it shows now, and that holiday is skipped u
 
 The pack is checked at session start and when a new `/relay` plan starts.
 
-Set the starting values with the `pack` option (`clawd`, `cats`, `dogs` or `shuffle`) and the `seasons` option (`on` or `off`), in `/config` or in `~/.claude/settings.json`:
+Set the starting values with the `pack` option (`clawd`, `cats`, `dogs`, `winter`, `adventurers` or `shuffle`) and the `seasons` option (`on` or `off`), in `/config` or in `~/.claude/settings.json`:
 
 ```json
 { "pluginConfigs": { "relay-panel": { "options": { "pack": "cats", "seasons": "on" } } } }
@@ -272,10 +276,11 @@ For: contributors adding a pack.
 ```
 Help me make a new relay sprite pack:
 1. Read docs/SPRITES.md and plugins/relay-panel/hooks/packs/types.ts first.
-2. Build plugins/relay-panel/hooks/packs/<id>.ts with its tests, following an existing pack.
+2. Build plugins/relay-panel/hooks/packs/<id>.ts, following an existing pack.
 3. Register it in plugins/relay-panel/hooks/packs/index.ts. An everyday pack also goes in the `pack` option's list in plugins/relay-panel/.claude-plugin/plugin.json; a holiday pack goes in SEASONS in plugins/relay-panel/hooks/packs/seasons.ts instead.
-4. Run `bun scripts/preview.ts`, open docs/preview/ and look at the pack before you call it done.
+4. Run `bun scripts/preview.ts` (or `npx tsx scripts/preview.ts` without bun), open docs/preview/ and look at the pack before you call it done.
 5. Run claude plugin test plugins/relay-panel.
+   If the `claude` or `bun` command is not found (for example in the Claude app), do not stop. Give me the exact commands to run in a terminal that has them, and wait for the result.
 ```
 
 ## Using it next to savvy
@@ -310,7 +315,9 @@ claude plugin validate plugins/relay-panel
 claude plugin test plugins/relay-panel
 ```
 
-How packs are built: `docs/SPRITES.md`. Pack galleries: `bun scripts/preview.ts` writes them to `docs/preview/` (not committed).
+These need the `claude` command in a terminal. The Claude app's `/plugin` commands cover install, update and uninstall only, so in the app run validate and test from a terminal that has the CLI.
+
+How packs are built: `docs/SPRITES.md`. Pack galleries: `bun scripts/preview.ts` (or `npx tsx scripts/preview.ts`) writes them to `docs/preview/` (not committed).
 
 ## License
 

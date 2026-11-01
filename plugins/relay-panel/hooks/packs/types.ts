@@ -4,16 +4,18 @@
 // conductor: the main session. builder, fixer, tester, scout: a relay worker's job, set by the
 // orchestrator per task. scout is also the built-in Explore agent; plain is any other subagent.
 export type Role = 'conductor' | 'builder' | 'fixer' | 'tester' | 'scout' | 'plain'
-// `expert` is the top tier, formerly `fable`; register.tsx and clawd.ts still accept that alias.
+// `expert` is the top tier, formerly `fable`; register.tsx still accepts that alias.
 export type Tier = 'expert' | 'heavy' | 'careful' | 'medium' | 'light' | 'other'
 
 export const ROLES: readonly Role[] = ['conductor', 'builder', 'fixer', 'tester', 'scout', 'plain']
 // The roles a planned relay task may carry; a worker with none is a builder.
 export const TASK_ROLES: readonly Role[] = ['builder', 'fixer', 'tester', 'scout']
-export const TIERS: readonly Tier[] = ['expert', 'heavy', 'careful', 'medium', 'light', 'other']
 
 export type DrawOptions = {
-  variant: string // from pack.variantOf(taskKey)
+  // uint32 from the panel: a per-role counter that starts at a random value each session, so
+  // same-role tasks get consecutive seeds; a task keeps its seed for the session. Only
+  // characters with random looks read it, via `seed % n`.
+  seed: number
   accent: string // tier colour
   dim?: boolean // planned task
   isWalking?: boolean // running: CSS animation on
@@ -28,7 +30,5 @@ export type Pack = {
   h: number
   css: string // one <style> block; selectors scoped under .p-<id>
   roles: readonly Role[] // costumes it draws; others fall back to 'plain'
-  variants: readonly string[] // coats / breeds / colours
-  variantOf: (taskKey: string) => string // stable hash pick
   draw: (x: number, y: number, who: { role: Role; tier: Tier }, o: DrawOptions) => string // SVG <g>
 }

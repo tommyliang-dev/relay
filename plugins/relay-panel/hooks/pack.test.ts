@@ -116,11 +116,6 @@ const listOf = async ($: Engine): Promise<string[]> => ((await $.tool.call({ too
 const firstLine = async ($: Engine): Promise<string> => (await listOf($))[0]
 const resume = ($: Engine) => $.session.start({ source: 'resume', cwd: '/repo', surface: 'desktop', isInteractive: true } as never)
 
-const variantsOf = (id: string) => {
-  const n = resolvePack(id).variants.length
-  return `${n} ${n === 1 ? 'variant' : 'variants'}`
-}
-
 test('pack tool: list heads with the settings line, then every pack, the one showing marked', async ($, on) => {
   await session($, on)
   const [head, ...lines] = await listOf($)
@@ -129,10 +124,8 @@ test('pack tool: list heads with the settings line, then every pack, the one sho
   for (const id of packIds()) {
     const p = resolvePack(id)
     const line = lines.find(l => l.startsWith(`${id}: `))
-    expect(line).toBe(`${id}: ${p.name} (${p.variants.length} ${p.variants.length === 1 ? 'variant' : 'variants'})${id === DEFAULT_PACK ? ' (active)' : ''}`)
+    expect(line).toBe(`${id}: ${p.name}${id === DEFAULT_PACK ? ' (active)' : ''}`)
   }
-  // A one-variant pack reads in the singular.
-  expect(lines.find(l => l.startsWith('clawd: '))).toContain('(1 variant)')
 })
 
 test('pack tool: set stores the everyday pack and redraws the band and the panel', async ($, on) => {
@@ -156,7 +149,7 @@ test('pack tool: set stores the everyday pack and redraws the band and the panel
   expect(await svgOf(ui)).not.toContain(scope(DEFAULT_PACK))
   const lines = await listOf($)
   expect(lines[0]).toBe(`everyday: ${id} · seasons on · showing: ${id} · next: turkeys Nov 15`)
-  expect(lines).toContain(`${id}: ${nameOf(id)} (${resolvePack(id).variants.length} ${resolvePack(id).variants.length === 1 ? 'variant' : 'variants'}) (active)`)
+  expect(lines).toContain(`${id}: ${nameOf(id)} (active)`)
   await bar.unmount()
   await ui.unmount()
 })
@@ -444,7 +437,9 @@ test('set with seasons off in December skips nothing', async ($, on) => {
 // The plugin picks with Math.random; packs/seasons.test.ts pins the draw. Here every
 // assertion holds whatever the draw.
 
-const EVERYDAY = ['cats', 'clawd', 'dogs']
+// Every registered pack but the holiday ones (turkeys and christmas), in registry order.
+const EVERYDAY = packIds().filter(id => id !== 'turkeys' && id !== 'christmas')
+const EVERYDAY_LIST = EVERYDAY.join(', ')
 
 test('shuffle: one pick per session; consecutive sessions differ; a new flow does not re-pick', async ($, on) => {
   // Dec 31 with Christmas skipped: the shuffle pick shows.
@@ -453,7 +448,7 @@ test('shuffle: one pick per session; consecutive sessions differ; a new flow doe
   const first = String(store.get('lastShuffle'))
   expect(EVERYDAY).toContain(first)
   expect((await drawn($)).band).toContain(scope(first))
-  expect(await firstLine($)).toBe(`everyday: shuffle (cats, clawd, dogs) · seasons on · showing: ${first} · christmas skipped until Dec 31 · next: turkeys Nov 15`)
+  expect(await firstLine($)).toBe(`everyday: shuffle (${EVERYDAY_LIST}) · seasons on · showing: ${first} · christmas skipped until Dec 31 · next: turkeys Nov 15`)
 
   // Next session: last session's pick is left out.
   await resume($)
@@ -492,7 +487,8 @@ test('shuffle [ids]: stores the list, picks now, and a second shuffle picks the 
 
   // `set shuffle` shuffles every non-holiday pack.
   const all = (await $.tool.call({ tool: PACK, action: 'set', id: 'shuffle' } as never)) as { result: string }
-  expect(all.result).toMatch(/^ok: shuffling cats, clawd, dogs; .+ now$/)
+  expect(all.result.startsWith(`ok: shuffling ${EVERYDAY_LIST}; `)).toBe(true)
+  expect(all.result.endsWith(' now')).toBe(true)
   expect(store.get('shuffleList')).toEqual([])
   expect(store.get('lastShuffle')).not.toBe(second)
 })
@@ -501,7 +497,7 @@ test('shuffle: holiday and unknown ids are refused, naming the valid ones; nothi
   const store = new Map<string, unknown>()
   await session($, on, store)
   const r = await $.command.run({ command: 'relay-pack', args: 'shuffle turkeys dragons' } as never)
-  expect(r.text).toBe('cannot shuffle "turkeys" (holiday pack), "dragons" (unknown); valid ids: cats, clawd, dogs')
+  expect(r.text).toBe(`cannot shuffle "turkeys" (holiday pack), "dragons" (unknown); valid ids: ${EVERYDAY_LIST}`)
   const t = (await $.tool.call({ tool: PACK, action: 'shuffle', ids: ['christmas'] } as never)) as { deny: string }
   expect(t.deny).toContain('"christmas" (holiday pack)')
   expect(store.has('everyday')).toBe(false)
@@ -514,7 +510,7 @@ test('shuffle during a season skips it, like set', async ($, on) => {
   const r = (await $.tool.call({ tool: PACK, action: 'shuffle' } as never)) as { result: string }
   const pick = String(store.get('lastShuffle'))
   expect(EVERYDAY).toContain(pick)
-  expect(r.result).toBe(`ok: shuffling cats, clawd, dogs; ${nameOf(pick)} now; ${nameOf('christmas')} skipped until Dec 31`)
+  expect(r.result).toBe(`ok: shuffling ${EVERYDAY_LIST}; ${nameOf(pick)} now; ${nameOf('christmas')} skipped until Dec 31`)
   expect(store.get('skipSeason')).toBe('christmas:2026')
   expect((await drawn($)).band).toContain(scope(pick))
 })
@@ -541,14 +537,14 @@ test('gallery: one card per pack, labelled; Use sets the everyday pack', async (
   expect(altOf(c, DEFAULT_PACK)?.endsWith(', Everyday · Showing')).toBe(true)
   expect(altOf(c, 'turkeys')?.endsWith(', Holiday · Nov 15-30')).toBe(true)
   expect(altOf(c, 'christmas')?.endsWith(', Holiday · December')).toBe(true)
-  expect(altOf(c, 'cats')).toBe(`${nameOf('cats')}: ${variantsOf('cats')}`)
+  expect(altOf(c, 'cats')).toBe(nameOf('cats'))
 
   expect(await ui.find({ key: `use-${DEFAULT_PACK}` })).toBeUndefined()
   await ui.press({ key: 'use-cats' })
   expect(store.get('everyday')).toBe('cats')
   c = await cards()
   expect(altOf(c, 'cats')?.endsWith(', Everyday · Showing')).toBe(true)
-  expect(altOf(c, DEFAULT_PACK)).toBe(`${nameOf(DEFAULT_PACK)}: ${variantsOf(DEFAULT_PACK)}`)
+  expect(altOf(c, DEFAULT_PACK)).toBe(nameOf(DEFAULT_PACK))
   expect(await ui.find({ key: `use-${DEFAULT_PACK}` })).toBeDefined()
   expect(await ui.find({ key: 'use-cats' })).toBeUndefined()
   await ui.unmount()

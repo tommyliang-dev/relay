@@ -32,6 +32,20 @@ const panel = atom({ plugin: 'relay-panel', key: 'panel' } as const, {
 })
 const now = atom({ plugin: 'relay-panel', key: 'now' } as const, 0)
 
+// Every task gets its own look the first time the panel sees it and keeps it for the session. Seeds count up
+// from a random start per role, so same-role tasks get consecutive (distinct) looks; `seed % n` picks the look.
+const seeds = new Map<string, number>()
+const nextSeed = new Map<string, number>()
+const seedOf = (role: string, key: string): number => {
+  const id = `${role}|${norm(key)}`
+  const known = seeds.get(id)
+  if (known !== undefined) return known
+  const n = nextSeed.get(role) ?? (Math.random() * 0x100000000) >>> 0
+  nextSeed.set(role, (n + 1) >>> 0)
+  seeds.set(id, n)
+  return n
+}
+
 const TOOL = 'mcp__relay-panel__progress'
 const STEP_TOOL = 'mcp__relay-panel__step'
 const PACK_TOOL = 'mcp__relay-panel__pack'
@@ -113,7 +127,6 @@ const STRINGS = {
     day: (m: number, d: number) => `${EN_SHORT[m - 1]} ${d}`,
     days: (m: number, a: number, b: number) => `${EN_SHORT[m - 1]} ${a}-${b}`,
     use: 'Use',
-    variants: (n: number) => `${n} ${n === 1 ? 'variant' : 'variants'}`,
     tier: { light: 'light', medium: 'medium', careful: 'careful', heavy: 'heavy', expert: 'expert', other: 'other' },
     effort: { low: 'low', medium: 'medium', high: 'high', xhigh: 'xhigh', max: 'max' },
   },
@@ -153,7 +166,6 @@ const STRINGS = {
     day: (m: number, d: number) => `${d} ${RU_OF[m - 1]}`,
     days: (m: number, a: number, b: number) => `${a}-${b} ${RU_OF[m - 1]}`,
     use: 'Выбрать',
-    variants: (n: number) => `вариантов: ${n}`,
     tier: { light: 'light', medium: 'medium', careful: 'careful', heavy: 'heavy', expert: 'expert', other: 'other' },
     effort: { low: 'low', medium: 'medium', high: 'high', xhigh: 'xhigh', max: 'max' },
   },
@@ -193,7 +205,6 @@ const STRINGS = {
     day: (m: number, d: number) => `${d} ב${HE_MONTHS[m - 1]}`,
     days: (m: number, a: number, b: number) => `${a}-${b} ב${HE_MONTHS[m - 1]}`,
     use: 'בחירה',
-    variants: (n: number) => `גרסאות: ${n}`,
     tier: { light: 'קל', medium: 'בינוני', careful: 'זהיר', heavy: 'כבד', expert: 'מומחה', other: 'אחר' },
     effort: { low: 'נמוך', medium: 'בינוני', high: 'גבוה', xhigh: 'גבוה מאוד', max: 'מקסימלי' },
   },
@@ -209,6 +220,17 @@ const isRtl = () => lang === 'he'
 // Tier and effort words as shown; anything unknown shows as it came.
 const tierWord = (tier: string): string => (tr().tier as Record<string, string>)[tier] ?? tier
 const effortWord = (effort: string): string => (tr().effort as Record<string, string>)[effort] ?? effort
+// Second line of a row: the role in bold text (the role id is the label), the tier in its colour, then the muted rest.
+// Only the tier carries colour, so the role never competes with it. Planned rows are dimmed (`cls` is `m`).
+// When too wide the rest is dropped first, then the line is cut.
+const roleLine = (role: string, tierText: string, color: string, rest: string[], cls: string, maxW: number): string => {
+  const sep = '  ·  '
+  const head = `${role}${sep}${tierText}`
+  const tail = textWidth(`${head}${rest.length ? sep + rest.join(sep) : ''}`, 11) <= maxW ? rest : []
+  if (!tail.length && textWidth(head, 11) > maxW) return `<tspan class="${cls}">${xml(fitText(head, 11, maxW))}</tspan>`
+  const roleCls = cls === 'm' ? 's' : 't'
+  return `<tspan class="${roleCls}" font-weight="600">${xml(role)}</tspan><tspan class="${cls}">${sep}</tspan><tspan fill="${color}">${xml(tierText)}</tspan>${tail.length ? `<tspan class="${cls}">${sep}${xml(tail.join(sep))}</tspan>` : ''}`
+}
 
 const isRussian = (v: unknown): boolean => typeof v === 'string' && /^(ru|russian|рус)/i.test(v.trim())
 const isHebrew = (v: unknown): boolean => typeof v === 'string' && /^(he|iw|hebrew|עברית)/i.test(v.trim())
@@ -399,9 +421,9 @@ const rowSvg = (f: Flow, W: number, isWorking: boolean, p: Pack): string => {
   // `direction="rtl"` puts Hebrew words and numbers in reading order; `start` is then the right edge.
   const titleAt = rtl ? `x="${W - 16}" direction="rtl" text-anchor="start"` : 'x="16"'
   const percentAt = rtl ? `x="${CAT_SLOT + 6}" y="${H / 2 + 4.5}"` : `x="${W - CAT_SLOT - 6}" y="${H / 2 + 4.5}" text-anchor="end"`
-  // The band's sprite is the conductor, in the pack's first pick ('' gives the cats' blue coat).
+  // The band's sprite is the conductor, always drawn with seed 0.
   const sprite = p.draw(rx(W - CAT_SLOT + 1, fit.w), fit.y, { role: 'conductor', tier: 'other' }, {
-    variant: p.variantOf(''),
+    seed: 0,
     accent: '#7F77DD',
     isWalking: isWorking,
     scale: fit.scale,
@@ -643,7 +665,7 @@ const endText = (W: number, x: number, y: number, words = false): string =>
   !isRtl() ? `x="${x}" y="${y}" text-anchor="end"` : `x="${W - x}" y="${y}"${words ? ' direction="rtl" text-anchor="end"' : ''}`
 
 // A panel sprite at x in a row of width W: on the mirrored side and facing left in Hebrew.
-// `variantKey` picks the variant, so the same task keeps the same look across redraws.
+// `seedKey` seeds the look (seedOf), so the same task keeps the same look across redraws.
 // `cy` is the line the sprite is centred on.
 const rowCat = (
   p: Pack,
@@ -651,14 +673,14 @@ const rowCat = (
   x: number,
   cy: number,
   who: { role: Role; tier: Tier },
-  variantKey: string,
+  seedKey: string,
   dim = false,
   isWalking = false,
   accent = colorOf(who.tier),
 ): string => {
   const fit = panelFit(p)
   return p.draw(mx(W, x, fit.w), Math.max(0, cy - fit.h / 2), who, {
-    variant: p.variantOf(variantKey),
+    seed: seedOf(who.role, seedKey),
     accent,
     dim,
     isWalking,
@@ -671,7 +693,7 @@ const rowCat = (
 const COMPACT_H = 32
 
 // A pane over 100,000 characters draws nothing and says nothing, so the sprites go through
-// `compact` (the gallery's five cards were ~330,000 before it).
+// `compact` (the gallery's cards were ~330,000 before it).
 const svg = (p: Pack, W: number, H: number, body: string): string =>
   `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${PANE_CSS}${p.css}${compact(body)}</svg>`
 
@@ -712,6 +734,7 @@ const agentSvg = (pk: Pack, W: number, f: Flow | null, a: AgentRun, at: number):
   const ctx = ctxOf(a)
   const TX = panelFit(pk).textX
   const textW = W - TX - 22
+  const role = costumeOf(f, a.type, a.description)
   const meta = [runModel(a)]
   if (a.round > 1) meta.push(`${s.round} ${a.round}`)
   if (a.status === 'failed') meta.push(s.failed)
@@ -726,9 +749,9 @@ const agentSvg = (pk: Pack, W: number, f: Flow | null, a: AgentRun, at: number):
     pk,
     W,
     66,
-    `${rowCat(pk, W, 0, 28, { role: costumeOf(f, a.type, a.description), tier }, a.description || a.id, false, a.status === 'running', color)}
+    `${rowCat(pk, W, 0, 28, { role, tier }, a.description || a.id, false, a.status === 'running', color)}
 <text class="t" ${startText(W, TX, 18)} font-family="${FONT}" font-size="13" font-weight="600">${xml(fitText(a.description || a.type, 13, textW))}</text>
-<text ${startText(W, TX, 34)} font-family="${FONT}" font-size="11"><tspan fill="${color}">${xml(tier === 'other' ? a.type : tierWord(tier))}</tspan><tspan class="s">  ${xml(meta.join('  ·  '))}</tspan></text>
+<text ${startText(W, TX, 34)} font-family="${FONT}" font-size="11">${roleLine(role, tier === 'other' ? a.type : tierWord(tier), color, meta, 's', textW)}</text>
 ${steps && stepsW > 30 ? `<text class="t" ${startText(W, TX, 49)} font-family="${FONT}" font-size="11" font-variant-numeric="tabular-nums">${xml(fitText(steps, 11, stepsW))}</text>` : ''}
 <text class="s" ${endText(W, TX + barW, 49, true)} font-family="${FONT}" font-size="11" font-variant-numeric="tabular-nums">${stats}</text>
 <rect class="k" x="${mx(W, TX, barW)}" y="55" width="${barW}" height="4" rx="2"/><rect${progress === null ? ' class="m"' : ''} x="${mx(W, TX, fillW)}" y="55" width="${fillW}" height="4" rx="2"${progress === null ? '' : ` fill="${color}"`}/>
@@ -750,7 +773,7 @@ const plannedSvg = (pk: Pack, W: number, p: Planned): string => {
     46,
     `${rowCat(pk, W, 0, 20, { role: taskRole(p), tier }, p.title, true, false, color)}
 <text class="s" ${startText(W, TX, 18)} font-family="${FONT}" font-size="13" font-weight="600">${xml(fitText(`${p.n}. ${p.title}`, 13, textW))}</text>
-<text ${startText(W, TX, 34)} font-family="${FONT}" font-size="11"><tspan fill="${color}">${xml(tierWord(tier))}</tspan><tspan class="m">  ${xml(meta.filter(Boolean).join('  ·  '))}</tspan></text>
+<text ${startText(W, TX, 34)} font-family="${FONT}" font-size="11">${roleLine(taskRole(p), tierWord(tier), color, meta.filter(Boolean), 'm', textW)}</text>
 ${statusMark(mx(W, W - 8), 16, 'planned', color)}
 <line class="ln" x1="0" y1="45.5" x2="${W}" y2="45.5"/>`,
   )
@@ -818,10 +841,9 @@ const packCardSvg = (p: Pack, W: number, labels: readonly CardLabel[]): string =
   const label = labelText(labels)
   const activeW = label ? textWidth(label, 11) + 12 : 0
   const nameW = inner - activeW
-  const count = s.variants(p.variants.length)
   const sprites = GALLERY.map((who, i) =>
     p.draw(mx(W, CARD_PAD + i * pitch, fit.w), 54 - fit.h / 2, who, {
-      variant: p.variantOf(who.role),
+      seed: seedOf(who.role, who.role),
       accent: colorOf(who.tier),
       isWalking: true,
       scale: fit.scale,
@@ -833,7 +855,7 @@ const packCardSvg = (p: Pack, W: number, labels: readonly CardLabel[]): string =
     W,
     CARD_H,
     `<rect class="tile" x="0" y="0" width="${W}" height="${CARD_H}" rx="8"/>
-<text ${startText(W, CARD_PAD, 22)} font-family="${FONT}" font-size="13"><tspan class="t" font-weight="600">${xml(fitText(p.name, 13, Math.max(40, nameW - textWidth(count, 11) - 12)))}</tspan><tspan class="s" font-size="11">  ·  ${xml(count)}</tspan></text>
+<text ${startText(W, CARD_PAD, 22)} font-family="${FONT}" font-size="13"><tspan class="t" font-weight="600">${xml(fitText(p.name, 13, Math.max(40, nameW - 12)))}</tspan></text>
 ${label ? `<text ${endText(W, W - CARD_PAD, 22, true)} font-family="${FONT}" font-size="11" font-weight="600">${labels.map((l, i) => `${i ? '<tspan class="s"> · </tspan>' : ''}${l.isOn ? `<tspan fill="#3B9C5F">${xml(l.text)}</tspan>` : `<tspan class="s">${xml(l.text)}</tspan>`}`).join('')}</text>` : ''}
 ${sprites}`,
   )
@@ -1006,7 +1028,7 @@ async function settingsLine($: EngineInterface): Promise<string> {
 // The settings, then every registered pack, one line each, the one showing marked.
 async function packList($: EngineInterface): Promise<string> {
   const active = await read($, pack)
-  const lines = PACKS.map(p => `${p.id}: ${p.name} (${p.variants.length} ${p.variants.length === 1 ? 'variant' : 'variants'})${p.id === active ? ' (active)' : ''}`)
+  const lines = PACKS.map(p => `${p.id}: ${p.name}${p.id === active ? ' (active)' : ''}`)
   lines.unshift(await settingsLine($))
   if (goneNote) {
     lines.unshift(goneNote)
@@ -1274,7 +1296,7 @@ export const register: Register = (on, options) => {
                 <Svg
                   key={`card-${p.id}`}
                   source={packCardSvg(p, W, labels)}
-                  alt={`${p.name}: ${s.variants(p.variants.length)}${labels.length ? `, ${labelText(labels)}` : ''}`}
+                  alt={`${p.name}${labels.length ? `, ${labelText(labels)}` : ''}`}
                   width={W}
                   height={CARD_H}
                 />
@@ -1293,7 +1315,6 @@ export const register: Register = (on, options) => {
           return (
             <Box key={p.id} flexDirection="row" gap={1}>
               <Text bold>{p.name}</Text>
-              <Text dimColor>{s.variants(p.variants.length)}</Text>
               {labels.map(l => (
                 <Text key={l.text} color={l.isOn ? DONE : undefined} dimColor={!l.isOn}>
                   {l.text}

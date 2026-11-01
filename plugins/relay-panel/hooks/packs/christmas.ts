@@ -1,22 +1,23 @@
-// A pixel Christmas cast in profile, 32x28 grid units, drawn as SVG rects. The character is
-// chosen by role, so a crew reads as a scene: Santa conducts (conductor), a gingerbread
-// figure swings a peppermint mallet (builder), a nutcracker peers through a magnifying glass
-// (fixer), Mrs Claus ticks off her clipboard (tester), an elf lights the way with a lantern
-// (scout), and the reindeer is everyone else (plain). Same canvas, facing, generated outline
-// and animation rules as cats.ts. The tier accent tints one costume piece per character:
-// Santa's hat band and belt, the gingerbread hard hat, the nutcracker's shako, Mrs Claus's
-// shawl, the elf's cap, the reindeer's harness strap.
+// Christmas: a pixel Christmas cast in profile, drawn as SVG rects. Same canvas, facing,
+// generated outline and animation rules as cats.ts.
+// Cast: conductor Santa (baton), builder gingerbread (hard hat, peppermint mallet), fixer
+//   nutcracker (shako, peppermint mallet), tester Mrs Claus (spectacles, test tube), scout elf
+//   (lantern), plain reindeer. Gingerbread, elf and reindeer pick one of six looks by seed % 6.
+// Accent: Santa's hat band and belt, the hard hat, the shako, Mrs Claus's shawl, the elf's cap,
+//   the reindeer's harness strap.
+// Box: 32x28 grid units; every figure sits two rows down so hats and antlers fit above it.
+// Animation: CSS only; legs step, the body bobs, tails and props swap between two pixel poses.
 
 import { type DrawOptions, type Pack, type Role, ROLES, type Tier } from './types'
 
-export const XMAS_W = 32
-export const XMAS_H = 28
+const XMAS_W = 32
+const XMAS_H = 28
 const DY = 2 // every figure sits two rows down so hats and antlers fit above it
 
-// --- variants -------------------------------------------------------------------------------
-// The six variants are the reindeer coats. The other characters read them as one detail: the
-// gingerbread's dough and gumdrops, the nutcracker's jacket, the elf's tunic and tights.
-// Santa and Mrs Claus ignore them.
+// --- looks ----------------------------------------------------------------------------------
+// The six looks are the reindeer coats. The three varying characters (gingerbread, elf, reindeer)
+// each pick their own look from the seed: the gingerbread's dough and gumdrops, the elf's tunic
+// and tights, the reindeer's coat. Santa, Mrs Claus and the nutcracker look the same for every seed.
 type Tones = { o: string; s: string; b: string; h: string }
 type Coat = Tones & { m: string; n: string; e: string; i: string }
 
@@ -32,20 +33,9 @@ const COATS: Record<string, Coat> = {
   rudolph: { o: '#4A2612', s: '#8B4F28', b: '#AE6A3A', h: '#C98755', m: '#F0E0C8', n: '#FF2F2A', e: '#231811', i: '#D59684' },
 }
 
-export const VARIANTS: readonly string[] = Object.keys(COATS)
+const LOOKS: readonly string[] = Object.keys(COATS)
 
-// FNV-1a so the same agent id always wears the same look across redraws and sessions.
-export const variantOf = (key: string): string => {
-  if (!key) return 'brown'
-  let h = 0x811c9dc5
-  for (let i = 0; i < key.length; i++) {
-    h ^= key.charCodeAt(i)
-    h = Math.imul(h, 0x01000193) >>> 0
-  }
-  return VARIANTS[h % VARIANTS.length]
-}
-
-// Cloth by variant index: the elf's tunic (tights a shade darker) and the nutcracker's jacket.
+// Cloth by look index: the elf's tunic (tights a shade darker). The nutcracker's jacket is always red.
 type Pair = { c: string; o: string }
 const GREEN: Pair = { c: '#3B9C5F', o: '#1C5E3A' }
 const RED: Pair = { c: '#C8102E', o: '#7A0C1E' }
@@ -54,10 +44,9 @@ const TEAL: Pair = { c: '#2A9D8F', o: '#176B62' }
 const PLUM: Pair = { c: '#8E3A7C', o: '#5E2352' }
 const BLUE: Pair = { c: '#3E78CF', o: '#24498A' }
 const TUNICS: Pair[] = [GREEN, RED, GOLD, TEAL, PLUM, BLUE]
-const JACKETS: Pair[] = [RED, BLUE, GREEN, TEAL, PLUM, GOLD]
-const cloth = (list: Pair[], variant: string): Pair => list[VARIANTS.indexOf(variant)] ?? list[0]
+const cloth = (list: Pair[], look: string): Pair => list[LOOKS.indexOf(look)] ?? list[0]
 
-// Gingerbread dough and gumdrop buttons by variant; rudolph gets a red gumdrop nose.
+// Gingerbread dough and gumdrop buttons by look; rudolph gets a red gumdrop nose.
 type Dough = { d: string; s: string; o: string; g: string; i: string; n?: string }
 const DOUGH: Record<string, Dough> = {
   brown: { d: '#B8733A', s: '#9A5E2C', o: '#5E3214', g: '#D0453F', i: '#FFFFFF' },
@@ -97,15 +86,9 @@ const HAIR: Ink = { c: '#CBC6BE', o: '#777269' }
 
 // Prop colours for layers put on top after the outline.
 const PROP: Record<string, string> = {
-  k: '#3D4752', // dark prop body
-  W: '#F6F2EA', // paper, snow
-  l: '#A9A49A', // grey edge of white things
-  y: '#E3B23C', // brass
-  o: '#A8743E', // wood
+  W: '#F6F2EA', // snow
   r: '#C8102E', // Santa red
   R: '#86101F', // its shadow
-  v: '#3B9C5F', // nice green
-  x: '#D0453F', // naughty red
 }
 
 // --- pictures --------------------------------------------------------------------------------
@@ -259,8 +242,13 @@ const GINGER: Seg[] = pic(4, [
   '..........dddddddddd',
 ])
 const HARD_HAT: Seg[] = [[13, -1, 'AAAAA'], [11, 0, 'AAAAAAAAA'], [10, 1, 'AAAAAAAAAAA'], [10, 2, 'AAAAAAAAAAA'], [8, 3, r('A', 15)]]
-const gingerbreadFigure = (variant: string, accent: string): Figure => {
-  const d = DOUGH[variant] ?? DOUGH.brown
+// peppermint mallet: a wooden handle into a squared, outlined head with candy stripes.
+const MALLET_MAP = { O: '#7A0C1E', R: '#C8102E', W: '#F6F2EA', o: '#8A5A2B' }
+const MALLET_HEAD: Seg[] = [[23, 8, 'OOOOOOO'], [23, 9, 'ORWRWRO'], [23, 10, 'ORWRWRO'], [23, 11, 'OOOOOOO']]
+const MALLET_HANDLE: Seg[] = [[26, 12, 'o'], [26, 13, 'o'], [26, 14, 'o'], [26, 15, 'o']]
+const shift = (segs: Seg[], dx: number, dy: number): Seg[] => segs.map(([x, y, s]) => [x + dx, y + dy, s] as Seg)
+const gingerbreadFigure = (look: string, accent: string): Figure => {
+  const d = DOUGH[look] ?? DOUGH.brown
   return {
     ink: {
       d: { c: d.d, o: d.o }, s: { c: d.s, o: d.o }, A: tinted(accent), E: flat('#2A1A10'),
@@ -277,16 +265,15 @@ const gingerbreadFigure = (variant: string, accent: string): Figure => {
       // icing: smile, hat-side swirl, wrist and ankle cuffs; gumdrop buttons
       { map: { W: d.i }, segs: [[17, 8, 'WW'], [19, 7, 'W'], [6, 14, 'W'], [6, 15, 'W'], [11, 23, 'WW'], [16, 23, 'WW'], [12, 4, 'W']] },
       { map: { g: d.g }, segs: [[17, 13, 'g'], [17, 15, 'g'], [17, 17, 'g']] },
-      // peppermint mallet: a wooden handle into a squared, outlined head with candy stripes.
-      // Raised upright (it), then struck forward with the head turned on its side (iu).
+      // the mallet raised upright (it), then struck forward with the head turned on its side (iu)
       {
         g: 'it',
-        map: { O: '#7A0C1E', R: '#C8102E', W: '#F6F2EA', o: '#8A5A2B' },
-        segs: [[23, 8, 'OOOOOOO'], [23, 9, 'ORWRWRO'], [23, 10, 'ORWRWRO'], [23, 11, 'OOOOOOO'], [26, 12, 'o'], [26, 13, 'o'], [26, 14, 'o'], [26, 15, 'o']],
+        map: MALLET_MAP,
+        segs: [...MALLET_HEAD, ...MALLET_HANDLE],
       },
       {
         g: 'iu',
-        map: { O: '#7A0C1E', R: '#C8102E', W: '#F6F2EA', o: '#8A5A2B' },
+        map: MALLET_MAP,
         segs: [[26, 15, 'oo'], [28, 12, 'OOOO'], [28, 13, 'ORRO'], [28, 14, 'OWWO'], [28, 15, 'ORRO'], [28, 16, 'OWWO'], [28, 17, 'ORRO'], [28, 18, 'OOOO']],
       },
     ],
@@ -324,13 +311,14 @@ const NUTCRACKER: Seg[] = pic(-2, [
   '..........WWWWWWWWWWW',
   '..........WWWWWWWWWWW',
 ])
-const MAGNIFIER_MAP = { k: '#B8860B', L: '#CDEBF7', G: '#FFFFFF', o: '#5A3A1E' }
-// brass ring with a pale lens and a glint, handle down into the glove
-const lens = (dy: number): Seg[] => [
-  [26, 6 + dy, 'kkkk'], [25, 7 + dy, 'kLLLLk'], [25, 8 + dy, 'kLGLLk'], [25, 9 + dy, 'kLLLLk'], [25, 10 + dy, 'kLLLLk'], [26, 11 + dy, 'kkkk'],
+// the mallet tapping: upright (it), then the head dips a pixel (iu). The handle stops above the
+// glove so the dipped pose never draws over the hand.
+const tap = (dy: number): Seg[] => [
+  ...shift(MALLET_HEAD, -1, dy),
+  ...shift(MALLET_HANDLE, -1, dy).filter(([, y]) => y <= 14),
 ]
-const nutcrackerFigure = (variant: string, accent: string): Figure => {
-  const jacket = cloth(JACKETS, variant)
+const nutcrackerFigure = (_look: string, accent: string): Figure => {
+  const jacket = RED
   return {
     ink: {
       A: tinted(accent), y: BRASS, k: BOOT, h: SNOW, W: SNOW, p: SKIN, P: EYE, n: NOSE_ROSY,
@@ -343,10 +331,9 @@ const nutcrackerFigure = (variant: string, accent: string): Figure => {
       { g: 'lb', segs: [[16, 21, 'WWWWW'], [16, 22, 'WWWWW'], [16, 23, 'BBBBB'], [16, 24, 'BBBBB'], [16, 25, 'BBBBBB']] },
       { g: 'bd', segs: [[19, 12, 'uu'], [20, 13, 'uuu'], [21, 14, 'uuu'], [22, 15, 'uu']] },
     ],
-    // the glass scans: level (it), then lifted a pixel on a longer handle (iu)
     layers: [
-      { g: 'it', map: MAGNIFIER_MAP, segs: [...lens(0), [26, 12, 'o'], [26, 13, 'o'], [25, 14, 'o']] },
-      { g: 'iu', map: MAGNIFIER_MAP, segs: [...lens(-1), [26, 11, 'o'], [26, 12, 'o'], [26, 13, 'o'], [25, 14, 'o']] },
+      { g: 'it', map: MALLET_MAP, segs: tap(0) },
+      { g: 'iu', map: MALLET_MAP, segs: tap(1) },
     ],
     late: [{ g: 'bd', segs: HAND }],
   }
@@ -354,7 +341,7 @@ const nutcrackerFigure = (variant: string, accent: string): Figure => {
 
 // ---- Mrs Claus (tester) ---------------------------------------------------------------------
 // Grey bun, spectacles, a shawl in the accent, red dress to the ground with a white apron down
-// the front, shoes peeking out, a clipboard held up at the shared hand. Letters as Santa plus
+// the front, shoes peeking out, a test tube held up at the shared hand. Letters as Santa plus
 // g hair, A shawl, H hand.
 const MRS_CLAUS: Seg[] = pic(0, [
   '.........ggg',
@@ -394,14 +381,14 @@ const mrsClausFigure = (accent: string): Figure => ({
     // one round lens round the eye, a short temple back towards the hair; mid grey so it
     // reads as wire, not an eye patch
     { segs: [[14, 4, 'kk'], [16, 3, 'kkk'], [16, 4, 'k'], [18, 4, 'k'], [16, 5, 'kkk']], map: { k: '#8A8A96' } },
-    // clipboard with a brass clip; the lines tick in, nice green and naughty red
+    // test tube: dark rim and outline, pale glass, rounded bottom, green liquid in the lower
+    // two thirds; a lighter bubble rises between two spots (c1 low, then c2 high)
     {
-      map: { o: '#8A5A2C' },
-      segs: [[26, 8, 'yy'], [24, 9, 'oooooo'], ...[10, 11, 12, 13, 14, 15, 16, 17, 18, 19].map(y => [24, y, 'oWWWWo'] as Seg), [24, 20, 'oooooo'], ...[12, 14, 16, 18].map(y => [27, y, 'll'] as Seg)],
+      map: { k: '#3D4752', g: '#D6EEF7', L: '#3FBF7F' },
+      segs: [[23, 8, 'kkkkkk'], [24, 9, 'kggk'], [24, 10, 'kggk'], ...[11, 12, 13, 14, 15, 16].map(y => [24, y, 'kLLk'] as Seg), [25, 17, 'kk']],
     },
-    { g: 'c1', segs: [[25, 12, 'v']] },
-    { g: 'c2', segs: [[25, 14, 'x']] },
-    { g: 'c3', segs: [[25, 18, 'v']] },
+    { g: 'c1', map: { B: '#B8F0D0' }, segs: [[26, 15, 'B']] },
+    { g: 'c2', map: { B: '#B8F0D0' }, segs: [[26, 13, 'B']] },
   ],
   late: [{ g: 'bd', segs: HAND }],
 })
@@ -443,8 +430,8 @@ const ELF_ARM: Seg[] = [[19, 12, 'uu'], [20, 13, 'uu'], [21, 14, 'uu'], [22, 15,
 // flame core in its own group that flickers.
 const LANTERN: Seg[] = [[24, 17, '.kk'], [23, 18, 'kkkk'], [23, 19, 'kaak'], [23, 20, 'kaak'], [23, 21, 'kaak'], [23, 22, 'kkkk']]
 const FLAME: Seg[] = [[24, 19, 'f'], [24, 20, 'ff'], [25, 21, 'f']]
-const elfFigure = (variant: string, accent: string): Figure => {
-  const tunic = cloth(TUNICS, variant)
+const elfFigure = (look: string, accent: string): Figure => {
+  const tunic = cloth(TUNICS, look)
   return {
     ink: {
       c: tinted(accent), W: SNOW, p: SKIN, P: EYE, n: NOSE_ROSY, y: BRASS,
@@ -459,13 +446,13 @@ const elfFigure = (variant: string, accent: string): Figure => {
   }
 }
 
-const FIGURES: Record<Role, (variant: string, accent: string) => Figure> = {
-  conductor: (_v, accent) => santaFigure(accent),
+const FIGURES: Record<Role, (look: string, accent: string) => Figure> = {
+  conductor: (_look, accent) => santaFigure(accent),
   builder: gingerbreadFigure,
   fixer: nutcrackerFigure,
-  tester: (_v, accent) => mrsClausFigure(accent),
+  tester: (_look, accent) => mrsClausFigure(accent),
   scout: elfFigure,
-  plain: (v, accent) => reindeerFigure(COATS[v], accent),
+  plain: (look, accent) => reindeerFigure(COATS[look], accent),
 }
 
 // --- render -------------------------------------------------------------------------------
@@ -504,8 +491,8 @@ const paint = (figure: Figure, tail?: Seg[]): Map<string, string[]> => {
   }
   outline()
 
-  // Layers are flat. A second prop pose (`iu`) shares pixels with the first, so it is kept
-  // off the grid and emitted as its own runs.
+  // Layers are flat. A second prop pose (`iu`) or a blinking spot (`c1`, `c2`) shares pixels with
+  // what is under it, so it is kept off the grid and emitted as its own runs.
   const extra = new Map<string, string[]>()
   for (const layer of figure.layers) {
     const group = layer.g ?? 'bd'
@@ -514,7 +501,7 @@ const paint = (figure: Figure, tail?: Seg[]): Map<string, string[]> => {
         if (ch === '.' || x + i >= XMAS_W) return
         const c = layer.map?.[ch] ?? PROP[ch]
         if (!c) return
-        if (group === 'iu') {
+        if (group === 'iu' || group === 'c1' || group === 'c2') {
           const list = extra.get(group) ?? []
           list.push(`<rect x="${x + i}" y="${y + DY}" width="1" height="1" fill="${c}"/>`)
           extra.set(group, list)
@@ -564,7 +551,7 @@ const svgFor = (figure: Figure): string => {
 
 const XMAS_CSS = `<style>
 .p-christmas .run g{transform-box:fill-box}
-.p-christmas .iu,.p-christmas .tw{opacity:0}
+.p-christmas .iu,.p-christmas .c2,.p-christmas .tw{opacity:0}
 .p-christmas .run .la{animation:christmas-st .5s steps(1) infinite}
 .p-christmas .run .lb{animation:christmas-st .5s steps(1) infinite -.25s}
 .p-christmas .run .bd{animation:christmas-bob .5s steps(1) infinite -.125s}
@@ -576,9 +563,8 @@ const XMAS_CSS = `<style>
 .p-christmas .run .iu{animation:christmas-on .5s steps(1) infinite}
 .p-christmas .c-fixer.run .it{animation-duration:1s}
 .p-christmas .c-fixer.run .iu{animation-duration:1s}
-.p-christmas .c-tester.run .c1{animation:christmas-t1 1s steps(1) infinite}
-.p-christmas .c-tester.run .c2{animation:christmas-t2 1s steps(1) infinite}
-.p-christmas .c-tester.run .c3{animation:christmas-t3 1s steps(1) infinite}
+.p-christmas .c-tester.run .c1{animation:christmas-off 1s steps(1) infinite}
+.p-christmas .c-tester.run .c2{animation:christmas-on 1s steps(1) infinite}
 .p-christmas .c-scout.run .fl{animation:christmas-flicker .5s steps(1) infinite}
 @keyframes christmas-st{50%{transform:translateY(-1px)}}
 @keyframes christmas-bob{50%{transform:translateY(1px)}}
@@ -586,21 +572,20 @@ const XMAS_CSS = `<style>
 @keyframes christmas-on{50%{opacity:1}}
 @keyframes christmas-ring{50%{transform:translateX(-1px)}}
 @keyframes christmas-glow{0%,100%{filter:drop-shadow(0 0 0 #FF2F2A);opacity:.7}50%{filter:drop-shadow(0 0 1.5px #FF6A60);opacity:1}}
-@keyframes christmas-t1{0%{opacity:0}25%{opacity:1}}
-@keyframes christmas-t2{0%{opacity:0}50%{opacity:1}}
-@keyframes christmas-t3{0%{opacity:0}75%{opacity:1}}
 @keyframes christmas-flicker{25%{opacity:.35}50%{opacity:1}75%{opacity:.6}}
 @media (prefers-reduced-motion: reduce){.p-christmas .run,.p-christmas .run g{animation:none!important}}
 </style>`
 
-// The grid is the same for every redraw of a row, so build it once per look.
+// The grid is the same for every redraw of a row, so build it once per look. Characters that
+// ignore the look share one entry.
 const cache = new Map<string, string>()
+const VARYING: ReadonlySet<Role> = new Set<Role>(['builder', 'scout', 'plain'])
 
-const inner = (role: Role, variant: string, accent: string): string => {
-  const key = `${role}|${variant}|${accent}`
+const inner = (role: Role, look: string, accent: string): string => {
+  const key = `${role}|${VARYING.has(role) ? look : ''}|${accent}`
   let hit = cache.get(key)
   if (hit === undefined) {
-    hit = svgFor(FIGURES[role](variant, accent))
+    hit = svgFor(FIGURES[role](look, accent))
     cache.set(key, hit)
   }
   return hit
@@ -608,13 +593,14 @@ const inner = (role: Role, variant: string, accent: string): string => {
 
 // `mirror` flips the figure inside its own box (x .. x + XMAS_W * scale) so it faces left.
 // The cast is chosen by role; the tier only reaches it through the accent colour. The
-// variant is a class too, so only rudolph's nose glows.
+// three varying characters pick their look from the seed. The look is a class too, so only
+// rudolph's nose glows.
 const draw = (x: number, y: number, who: { role: Role; tier: Tier }, o: DrawOptions): string => {
   const name: Role = Object.hasOwn(FIGURES, who.role) ? who.role : 'plain'
-  const variant = COATS[o.variant] ? o.variant : 'brown'
+  const look = LOOKS[(o.seed >>> 0) % LOOKS.length]
   const scale = o.scale ?? 1
   const place = o.mirror ? `translate(${x + XMAS_W * scale},${y}) scale(${-scale},${scale})` : `translate(${x},${y}) scale(${scale})`
-  return `<g class="p-christmas"><g transform="${place}" opacity="${o.dim ? 0.45 : 1}" shape-rendering="crispEdges"><g class="c-${name} v-${variant}${o.isWalking ? ' run' : ''}">${inner(name, variant, o.accent)}</g></g></g>`
+  return `<g class="p-christmas"><g transform="${place}" opacity="${o.dim ? 0.45 : 1}" shape-rendering="crispEdges"><g class="c-${name}${VARYING.has(name) ? ` v-${look}` : ''}${o.isWalking ? ' run' : ''}">${inner(name, look, o.accent)}</g></g></g>`
 }
 
 export const christmas: Pack = {
@@ -624,7 +610,5 @@ export const christmas: Pack = {
   h: XMAS_H,
   css: XMAS_CSS,
   roles: ROLES,
-  variants: VARIANTS,
-  variantOf,
   draw,
 }

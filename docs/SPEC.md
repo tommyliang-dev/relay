@@ -1,6 +1,6 @@
 # relay: spec
 
-Describes relay 0.4.0.
+Describes relay 0.4.0 and relay-panel 0.5.0.
 
 ## Goal
 
@@ -46,7 +46,7 @@ export type Role = 'conductor' | 'builder' | 'fixer' | 'tester' | 'scout' | 'pla
 export type Tier = 'expert' | 'heavy' | 'careful' | 'medium' | 'light' | 'other' // expert: formerly fable
 
 export type DrawOptions = {
-  variant: string     // from pack.variantOf(taskKey)
+  seed: number        // uint32; next of a per-role counter (random start per session), fixed per task
   accent: string      // tier colour
   dim?: boolean       // planned task
   isWalking?: boolean // running: CSS animation on
@@ -60,13 +60,11 @@ export type Pack = {
   w: number; h: number          // drawing grid in px at scale 1
   css: string                   // one <style> block; selectors scoped under .p-<id>
   roles: readonly Role[]        // costumes it draws; others fall back to 'plain'
-  variants: readonly string[]   // coats / breeds / colours
-  variantOf: (taskKey: string) => string // stable hash pick
   draw: (x: number, y: number, who: { role: Role; tier: Tier }, o: DrawOptions) => string // SVG <g>
 }
 ```
 
-`who` carries both role and tier because Clawd dresses by tier (astronaut expert, formerly fable; detective heavy, hard-hat careful, chef medium, racer light, pirate scout) while the other packs dress by role. A pack uses whichever it wants.
+`who` carries both role and tier because the role picks the character (or costume, breed, colour) and the tier tints one piece. Only a few characters use `seed`, via `seed % n`; the rest ignore it.
 
 The registry `hooks/packs/index.ts` lists the packs, and the panel draws only through it, never a pack directly. CSS from every pack is scoped under its own `.p-<id>` class so two packs never collide in a gallery.
 
@@ -76,19 +74,29 @@ The orchestrator sets a `role` on every planned task in `mcp__relay-panel__progr
 
 ### Packs
 
-1. **cats**: British Shorthairs, 6 roles, 8 coats.
-2. **clawd**: the stock savvy-progress crab, wrapped; dressed by tier, one clay variant. The default everyday pack.
-3. **dogs**: corgi, husky, samoyed, bichon frise, maltese, shiba. Breed is the variant; costumes by role.
-4. **turkeys** (holiday): six heritage breeds; costumes by role.
-5. **christmas** (holiday): one character per role: Santa, gingerbread, nutcracker, Mrs Claus, an elf with a lantern, reindeer.
+Seven packs. For every pack the role picks the character (or costume, breed, colour) and the tier colour, `accent`, tints part of the costume (a hat band, collar, scarf or clasp). A few characters get a random look from the seed.
 
-Adding a pack = one file + one line in the registry + its tests. No panel change.
+1. **cats**: British Shorthair art; the role picks one of six coats (conductor lilac point, builder cream van, fixer cream and white, tester white, scout cream, plain blue and white).
+2. **clawd**: the stock savvy-progress crab, wrapped; one costume per role (astronaut, engineer, detective, racer, pirate, bare). The default everyday pack.
+3. **dogs**: the role picks the breed (conductor Pomeranian in chocolate and cream, builder corgi, fixer shiba, tester bichon frise, scout husky, plain Mabel the Australian shepherd in blue merle).
+4. **turkeys** (holiday, Nov 15-30): one simple body; the role picks the heritage colour (conductor bronze, builder bourbon red, fixer slate, tester white holland, scout narragansett, plain royal palm). No breed silhouettes.
+5. **christmas** (holiday, December): one character per role: Santa, gingerbread with a peppermint mallet, nutcracker with the same mallet, Mrs Claus with a test tube, an elf with a lantern, reindeer. Santa, nutcracker and Mrs Claus have one look; gingerbread (dough), elf (tunic) and reindeer (coat) pick one of six looks from the seed.
+6. **winter**: front-facing snowman (conductor), yeti (builder), polar bear (fixer), snowy owl (tester), arctic fox (scout), penguin (plain). No held props. 36x30.
+7. **adventurers**: front-facing magician with a glowing-orb staff (conductor), thief with twin daggers (builder), knight with sword and shield (fixer), healer with a floating tome (tester), archer with a bow and fire arrow (scout), ninja (plain). 32x30.
+
+Shared props (cats, dogs, turkeys, christmas): fixers hold the peppermint mallet, testers a test tube, and scouts (cats, dogs, turkeys) a flashlight with a beam; the elf keeps its lantern. Clawd, winter and adventurers use their own props.
+
+Sprite boxes: cats, dogs and turkeys 36x28, christmas 32x28, winter 36x30, adventurers 32x30, clawd 30x28. The panel draws sprites at full size up to a 36x32 box and scales anything larger down.
+
+Adding a pack = one file + one line in the registry. `hooks/packs/packs.test.ts` runs over every registered pack, so it needs no test of its own. No panel change.
+
+**Gallery size.** A pane over 100,000 characters draws nothing and says nothing. `register.tsx` runs every pane's sprites through `packs/compact.ts` (rect runs become one path per fill). All seven packs together are about 80,000 characters of compacted sprites and CSS before card text, and `packs.test.ts` fails at 90,000, so a new pack has about 10,000 characters for its six walking sprites and CSS.
 
 ## Active pack: storage and redraw
 
 Two settings and a shuffle option (since relay-panel 0.3.0; 0.2.x had one `auto` or pinned mode):
 
-- **Everyday pack**: a pack id, or `shuffle`. The `$.store` key `everyday`, then the plugin option `pack` ("Everyday pack": `clawd` default, `cats`, `dogs`, `shuffle`; a legacy `auto` reads as the default). Any registered id may be stored, holiday packs included (`/relay-pack turkeys` draws turkeys whenever no season shows).
+- **Everyday pack**: a pack id, or `shuffle`. The `$.store` key `everyday`, then the plugin option `pack` ("Everyday pack": `clawd` default, `cats`, `dogs`, `winter`, `adventurers`, `shuffle`; a legacy `auto` reads as the default). Any registered id may be stored, holiday packs included (`/relay-pack turkeys` draws turkeys whenever no season shows).
 - **Seasons**: on or off. The store key `seasons` (boolean), then the option `seasons` (`on` default, `off`).
 - **Shuffle list**: the store key `shuffleList` (empty = every non-holiday pack).
 - **Skipped season**: the store key `skipSeason`, `'<seasonId>:<year the season starts>'` (`christmas:2026`), or absent. A key from a season that is over never matches; it is cleared at `session.start`.
@@ -125,7 +133,7 @@ Why not a settings key: writing `settings.json` from a mod is heavier, and the o
 ## Swapping packs
 
 - **Tool** `mcp__relay-panel__pack` `{ action: 'list' | 'set' | 'shuffle' | 'seasons' | 'preview', id?, ids?, on? }`:
-  - `list`: the settings line first, then ids, names, variant count, `(active)` on the one showing. The line: `everyday: cats · seasons on · showing: cats · next: turkeys Nov 15`; a shuffle reads `everyday: shuffle (cats, dogs) · …`; a skip adds `· christmas skipped until Dec 31`; seasons off reads `· seasons off` with no `next`.
+  - `list`: the settings line first, then ids, names, `(active)` on the one showing. The line: `everyday: cats · seasons on · showing: cats · next: turkeys Nov 15`; a shuffle reads `everyday: shuffle (cats, dogs) · …`; a skip adds `· christmas skipped until Dec 31`; seasons off reads `· seasons off` with no `next`.
   - `set` with `id`: a pack id becomes the everyday pack (`ok: everyday pack is Pixel dogs`; in season `ok: Pixel dogs now; Christmas skipped until Dec 31`); `shuffle` shuffles every non-holiday pack; `auto` turns seasons on. An unknown id is refused, naming the valid ones.
   - `shuffle` with optional `ids`: everyday `shuffle` over those ids, with a fresh pick now and the same in-season skip. Holiday or unknown ids are refused, naming the valid ones.
   - `seasons` with `on`: holiday packs on or off (`ok: seasons off; showing Clawd`).
@@ -136,6 +144,6 @@ Why not a settings key: writing `settings.json` from a mod is heavier, and the o
 ## Verification
 
 - `claude plugin validate` on both plugins and the marketplace root.
-- `claude plugin test plugins/relay-panel`: the fork's tests ported (renamed tools and ids), plus per-pack tests (every role draws, `variantOf` stable, CSS scoped, width/height honoured) and a pack-swap test (set → atom changes → drawn SVG changes pack class).
-- Visual: `bun scripts/preview.ts` renders each pack's gallery to `docs/preview/`; look at it in the browser, and at the live panel in Claude Code after swapping.
+- `claude plugin test plugins/relay-panel`: the fork's tests ported (renamed tools and ids), plus `hooks/packs/packs.test.ts` (runs over every pack: every role draws, CSS scoped, width/height honoured), `hooks/packs/compact.test.ts` (compacted markup paints the same pixels) and a pack-swap test in `hooks/pack.test.ts` (set → atom changes → drawn SVG changes pack class).
+- Visual: `bun scripts/preview.ts` (or `npx tsx scripts/preview.ts`) renders each pack's gallery to `docs/preview/`; look at it in the browser, and at the live panel in Claude Code after swapping.
 - Install test: add the marketplace from the local path, install both, confirm tool names and `/relay-agents`, `/relay-pack` appear.
