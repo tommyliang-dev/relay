@@ -9,18 +9,20 @@ import { winter } from './winter'
 import { adventurers } from './adventurers'
 import type { Pack } from './types'
 
-// Registry order is display order: the everyday packs, then the seasonal ones.
-export const PACKS: readonly Pack[] = [clawd, cats, dogs, adventurers, winter, turkeys, christmas]
+// Registry order is display order: the Characters group, then the Seasonal group, each alphabetical by id.
+export const PACKS: readonly Pack[] = [adventurers, cats, clawd, dogs, christmas, turkeys, winter]
 
-// The packs the list and the gallery group under "Seasonal". For display only: winter is not
+// The packs the list and the gallery group under "Seasonal"; every other pack is under "Characters". For display only: winter is not
 // a holiday (packs/seasons.ts), so it stays a shuffle candidate and a valid everyday pack.
-export const SEASONAL_IDS: readonly string[] = ['winter', 'turkeys', 'christmas']
+export const SEASONAL_IDS: readonly string[] = ['christmas', 'turkeys', 'winter']
 
 export const isSeasonalPack = (id: string): boolean => SEASONAL_IDS.includes(id)
 
-// Registered packs outside / inside the seasonal group, each in registry order.
-export const everydayPacks = (): Pack[] => PACKS.filter(p => !isSeasonalPack(p.id))
-export const seasonalPacks = (): Pack[] => PACKS.filter(p => isSeasonalPack(p.id))
+const byId = (a: Pack, b: Pack): number => a.id.localeCompare(b.id)
+
+// Registered packs in the Characters group / the Seasonal group, each alphabetical by id (whatever the registry order).
+export const characterPacks = (): Pack[] => PACKS.filter(p => !isSeasonalPack(p.id)).sort(byId)
+export const seasonalPacks = (): Pack[] => PACKS.filter(p => isSeasonalPack(p.id)).sort(byId)
 
 // The off-season pack (packs/seasons.ts OFF_SEASON) and the fallback for any unknown id.
 export const DEFAULT_PACK = 'clawd'

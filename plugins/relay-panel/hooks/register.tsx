@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import { DEFAULT_PACK, everydayPacks, packById, packIds, resolvePack, seasonalPacks } from './packs'
+import { DEFAULT_PACK, characterPacks, packById, packIds, resolvePack, seasonalPacks } from './packs'
 import { compact } from './packs/compact'
 import { isRelayCommand, looseId, parseRelayArgs } from './subcommands'
 import type { RelayAction } from './subcommands'
@@ -125,6 +125,7 @@ const STRINGS = {
     showing: 'Showing',
     everyday: 'Everyday',
     holiday: 'Holiday',
+    characters: 'Characters',
     seasonal: 'Seasonal',
     month: (m: number) => EN_MONTHS[m - 1],
     day: (m: number, d: number) => `${EN_SHORT[m - 1]} ${d}`,
@@ -165,6 +166,7 @@ const STRINGS = {
     showing: 'Сейчас',
     everyday: 'Повседневный',
     holiday: 'Праздник',
+    characters: 'Персонажи',
     seasonal: 'Сезонные',
     month: (m: number) => RU_MONTHS[m - 1],
     day: (m: number, d: number) => `${d} ${RU_OF[m - 1]}`,
@@ -205,6 +207,7 @@ const STRINGS = {
     showing: 'מוצגת',
     everyday: 'יומיומית',
     holiday: 'חג',
+    characters: 'דמויות',
     seasonal: 'עונתיים',
     month: (m: number) => HE_MONTHS[m - 1],
     day: (m: number, d: number) => `${d} ב${HE_MONTHS[m - 1]}`,
@@ -1030,11 +1033,11 @@ async function settingsLine($: EngineInterface): Promise<string> {
   return parts.join(' · ')
 }
 
-// The settings, the everyday packs, then `seasonal:` and the seasonal packs; one line each, the one showing marked.
+// The settings, `characters:` and its packs, then `seasonal:` and its packs; one line each, alphabetical, the one showing marked.
 async function packList($: EngineInterface): Promise<string> {
   const active = await read($, pack)
   const line = (p: Pack) => `${p.id}: ${p.name}${p.id === active ? ' (active)' : ''}`
-  const lines = [await settingsLine($), ...everydayPacks().map(line), 'seasonal:', ...seasonalPacks().map(line)]
+  const lines = [await settingsLine($), 'characters:', ...characterPacks().map(line), 'seasonal:', ...seasonalPacks().map(line)]
   if (goneNote) {
     lines.unshift(goneNote)
     goneNote = ''
@@ -1306,8 +1309,13 @@ export const register: Register = (on, options) => {
     const hasUse = (p: Pack) => p.id !== cfg.everyday
     const use = (p: Pack) => <Button key={`use-${p.id}`} label={s.use} onPress={() => void setEveryday($, p.id)} />
     const align = isRtl() ? 'flex-end' : undefined
-    // The everyday packs, then the "Seasonal" header, then the seasonal packs.
-    const header = (
+    // A "Characters" header and its packs, then a "Seasonal" header and its packs, each alphabetical.
+    const charactersHeader = (
+      <Text key="characters-header" bold>
+        {s.characters}
+      </Text>
+    )
+    const seasonalHeader = (
       <Text key="seasonal-header" bold>
         {s.seasonal}
       </Text>
@@ -1333,8 +1341,9 @@ export const register: Register = (on, options) => {
       }
       return (
         <Box flexDirection="column" gap={1} alignItems={align}>
-          {everydayPacks().map(card)}
-          {header}
+          {charactersHeader}
+          {characterPacks().map(card)}
+          {seasonalHeader}
           {seasonalPacks().map(card)}
         </Box>
       )
@@ -1356,8 +1365,9 @@ export const register: Register = (on, options) => {
     }
     return (
       <Box flexDirection="column" gap={1}>
-        {everydayPacks().map(row)}
-        {header}
+        {charactersHeader}
+        {characterPacks().map(row)}
+        {seasonalHeader}
         {seasonalPacks().map(row)}
       </Box>
     )

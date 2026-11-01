@@ -1,7 +1,7 @@
 // One contract test for every pack in the registry. A new pack is covered as soon as it is in PACKS.
 import { expect, test } from 'claude-code/testing'
 import { compact } from './compact'
-import { DEFAULT_PACK, PACKS, SEASONAL_IDS, everydayPacks, isSeasonalPack, packById, packIds, resolvePack, seasonalPacks } from './index'
+import { DEFAULT_PACK, PACKS, SEASONAL_IDS, characterPacks, isSeasonalPack, packById, packIds, resolvePack, seasonalPacks } from './index'
 import { isHoliday, shuffleCandidates } from './seasons'
 import { ROLES, type DrawOptions, type Pack, type Role } from './types'
 
@@ -23,17 +23,17 @@ test('registry: unique ids, a registered default, lookups fall back to it', () =
   for (const bad of ['nope', undefined, 42]) expect(resolvePack(bad).id).toBe(DEFAULT_PACK)
 })
 
-test('registry: everyday packs first, then the seasonal ones; winter is seasonal for display only', () => {
-  expect(packIds()).toEqual(['clawd', 'cats', 'dogs', 'adventurers', 'winter', 'turkeys', 'christmas'])
-  expect(SEASONAL_IDS).toEqual(['winter', 'turkeys', 'christmas'])
-  expect(everydayPacks().map(p => p.id)).toEqual(['clawd', 'cats', 'dogs', 'adventurers'])
-  expect(seasonalPacks().map(p => p.id)).toEqual(['winter', 'turkeys', 'christmas'])
-  expect([...everydayPacks(), ...seasonalPacks()]).toEqual([...PACKS])
+test('registry: Characters then Seasonal, each alphabetical by id; winter is seasonal for display only', () => {
+  expect(packIds()).toEqual(['adventurers', 'cats', 'clawd', 'dogs', 'christmas', 'turkeys', 'winter'])
+  expect(SEASONAL_IDS).toEqual(['christmas', 'turkeys', 'winter'])
+  expect(characterPacks().map(p => p.id)).toEqual(['adventurers', 'cats', 'clawd', 'dogs'])
+  expect(seasonalPacks().map(p => p.id)).toEqual(['christmas', 'turkeys', 'winter'])
+  expect([...characterPacks(), ...seasonalPacks()]).toEqual([...PACKS])
   expect(isSeasonalPack('winter') && isSeasonalPack('turkeys') && isSeasonalPack('christmas')).toBe(true)
   expect(isSeasonalPack('cats') || isSeasonalPack('nope')).toBe(false)
   // Winter is no holiday: it can still be shuffled to, while turkeys and christmas cannot.
   expect(isHoliday('winter')).toBe(false)
-  expect(shuffleCandidates([], packIds())).toEqual(['clawd', 'cats', 'dogs', 'adventurers', 'winter'])
+  expect(shuffleCandidates([], packIds())).toEqual(['adventurers', 'cats', 'clawd', 'dogs', 'winter'])
 })
 
 for (const pack of PACKS) {

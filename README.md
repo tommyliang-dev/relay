@@ -11,7 +11,7 @@ relay keeps that design and adds:
 - sprite packs
 - seasonal holiday packs
 - an everyday pack and shuffle
-- a pack gallery, everyday packs first and seasonal ones last
+- a pack gallery, grouped into Characters and Seasonal, each alphabetical
 - one `/relay` command: `/relay <task>` delegates, and `/relay agents`, `/relay preview` and `/relay pack …` run instantly, with no model turn
 - the orchestration rules, built into the skill
 - model presets
@@ -37,7 +37,7 @@ Install relay for me. Work out where you're running from your own context; don't
    - Custom: I pick a model and effort per tier.
 4. For anything but Default, add a "## Relay models" block to my user CLAUDE.md (in ~/.claude, or CLAUDE_CONFIG_DIR if set), one line per tier like "- light: sonnet, low" (haiku, sonnet, opus or fable). If the file exists, back it up first (ask where; suggest CLAUDE.md.backup-<date> next to it). Keep what's there and show me the diff before saving.
 5. If relay hasn't loaded here (the relay skill and mcp__relay-panel__ tools), tell me how to load it: a new session, or a restart. If the panel never loads, my Claude Code is too old for mods.
-6. Short tour: /relay <task> (full name /relay:relay); /relay agents [open]; /relay preview; /relay pack [name | shuffle | seasonal on|off] for sprite packs: clawd, cats, dogs, adventurers, and seasonal winter, turkeys, christmas. Turkeys show Nov 15-30 and Christmas in December; my everyday pack (clawd) the rest of the year.
+6. Short tour: /relay <task> (full name /relay:relay); /relay agents [open]; /relay preview; /relay pack [name | shuffle | seasonal on|off] for sprite packs: characters (adventurers, cats, clawd, dogs) and seasonal (christmas, turkeys, winter). Turkeys show Nov 15-30 and Christmas in December; my everyday pack (clawd) the rest of the year.
 ````
 
 Good for: trying relay with nothing global changed except an optional model block.
@@ -64,7 +64,7 @@ Install relay for me and make it my default way to delegate. Work out where you'
 
 5. If another orchestrator would compete with relay (such as savvy-flow or a savvy-flow-auto skill), ask before disabling it.
 6. If relay hasn't loaded here (the relay skill and mcp__relay-panel__ tools), tell me how to load it: a new session, or a restart. If the panel never loads, my Claude Code is too old for mods.
-7. Short tour: /relay <task> (full name /relay:relay); /relay agents [open]; /relay preview; /relay pack [name | shuffle | seasonal on|off] for sprite packs: clawd, cats, dogs, adventurers, and seasonal winter, turkeys, christmas. Turkeys show Nov 15-30 and Christmas in December; my everyday pack (clawd) the rest of the year.
+7. Short tour: /relay <task> (full name /relay:relay); /relay agents [open]; /relay preview; /relay pack [name | shuffle | seasonal on|off] for sprite packs: characters (adventurers, cats, clawd, dogs) and seasonal (christmas, turkeys, winter). Turkeys show Nov 15-30 and Christmas in December; my everyday pack (clawd) the rest of the year.
 ````
 
 Good for: every session delegates the same way without typing `/relay`. The working rules live in the skill, so updating relay updates them.
@@ -124,8 +124,8 @@ expert runs on Opus 5.5 unless you choose Baller.
 | `relay` skill | The same flow, triggered on its own when you ask for non-trivial work. |
 | `/relay agents` | Opens or closes the agents panel. Handled by relay-panel instantly, no model turn. |
 | `/relay agents open` | Opens the panel, or brings it forward, without closing it. |
-| `/relay preview` | Opens the sprite pack gallery: everyday packs first, then a Seasonal section. `/relay pack preview` works too. |
-| `/relay pack` | Shows the pack settings and lists the packs: everyday packs, then a `seasonal:` group. Also `/relay pack list`. |
+| `/relay preview` | Opens the sprite pack gallery: a Characters group, then a Seasonal group, each alphabetical. `/relay pack preview` works too. |
+| `/relay pack` | Shows the pack settings and lists the packs: a `characters:` group, then a `seasonal:` group, each alphabetical. Also `/relay pack list`. |
 | `/relay pack <name>` | Makes that pack your everyday pack. Names are loose (cat → cats, crab → clawd, xmas → christmas, thanksgiving → turkeys); an unknown name shows the pack list. |
 | `/relay pack shuffle [names]` | A random non-holiday pack each session, from all of them or the names you give. |
 | `/relay pack seasonal on|off` | Turns the holiday packs on or off (`seasons` also works; `/relay pack auto` is `on`). |
@@ -152,16 +152,16 @@ Each sprite is dressed by its role. The main session is the conductor. When rela
 
 The role picks the character (or the costume, breed or colour), so the job reads at a glance. The tier colour tints part of the costume. A few characters also get a random look, fixed for each task.
 
-- **clawd** (the default everyday pack): the original crab, dressed by role: astronaut (conductor), engineer (builder), detective (fixer), racer (tester), pirate (scout), bare (plain).
-- **cats**: British Shorthairs. The role picks one of six coats.
-- **dogs**: the role picks the breed: Pomeranian (conductor), corgi (builder), shiba (fixer), bichon frise (tester), husky (scout), and Mabel the Australian shepherd (plain).
 - **adventurers**: a magician conducts, a thief with twin daggers builds, a knight fixes, a healer tests, an archer scouts, and ninjas are everyone else.
+- **cats**: British Shorthairs. The role picks one of six coats.
+- **clawd** (the default everyday pack): the original crab, dressed by role: astronaut (conductor), engineer (builder), detective (fixer), racer (tester), pirate (scout), bare (plain).
+- **dogs**: the role picks the breed: Pomeranian (conductor), corgi (builder), shiba (fixer), bichon frise (tester), husky (scout), and Mabel the Australian shepherd (plain).
 
-Seasonal (listed last in `/relay pack` and the gallery):
+Seasonal (listed last in `/relay pack` and the gallery, alphabetical):
 
-- **winter**: a snowman conducts, a yeti builds, a polar bear fixes, a snowy owl tests, an arctic fox scouts, and penguins are everyone else. Not a holiday pack: it can be your everyday pack or part of a shuffle.
-- **turkeys** (holiday): one turkey body; the role picks the heritage colour: bronze, bourbon red, slate, white holland, narragansett, royal palm.
 - **christmas** (holiday): Santa conducts, a gingerbread man builds, a nutcracker fixes, Mrs Claus tests, an elf scouts with a lantern, and reindeer are everyone else.
+- **turkeys** (holiday): one turkey body; the role picks the heritage colour: bronze, bourbon red, slate, white holland, narragansett, royal palm.
+- **winter**: a snowman conducts, a yeti builds, a polar bear fixes, a snowy owl tests, an arctic fox scouts, and penguins are everyone else. Not a holiday pack: it can be your everyday pack or part of a shuffle.
 
 In cats, dogs, turkeys and christmas, fixers hold a peppermint mallet and testers a test tube; scouts hold a flashlight (the christmas elf keeps its lantern).
 
