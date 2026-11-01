@@ -1,5 +1,6 @@
 ---
-name: relay-pack
+name: relay-packs
+user-invocable: false
 description: List, preview or switch the sprite pack drawn in the relay agents panel (an everyday pack, or a shuffle, with holiday packs in season; cats, clawd, dogs, winter, adventurers, turkeys and more). Use when the user asks to change, swap, shuffle or show the panel's sprites, pets or critters, or to turn the holiday packs on or off.
 ---
 
@@ -28,4 +29,6 @@ What the user says, and the call:
 - "Turn off holidays", "no Christmas sprites", "no seasonal packs": `action: "seasons"` with `on: false`.
 - "Turn holidays back on", "follow the seasons", "seasonal", "automatic": `action: "seasons"` with `on: true` (also lifts a skipped season). `set` with `id: "auto"` does the same.
 
-Report the result in one line. Mention that `/relay-pack` (list), `/relay-pack <id>`, `/relay-pack shuffle [ids]`, `/relay-pack seasons on|off` and `/relay-pack preview` do the same without the model.
+The gallery shows the everyday packs first (clawd, cats, dogs, adventurers), then a Seasonal section (winter, turkeys, christmas). Winter is seasonal for display only: it is still a valid everyday pack and a shuffle candidate.
+
+Report the result in one line. Mention that `/relay-packs` (list), `/relay-packs <id>`, `/relay-packs shuffle [ids]`, `/relay-packs seasons on|off` and `/relay-packs preview` do the same without the model. The old `/relay-pack` still works as a hidden alias.

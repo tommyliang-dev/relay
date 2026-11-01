@@ -1,7 +1,7 @@
 import type { On } from 'claude-code'
 import { expect, mock, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
-import { DEFAULT_PACK, packIds, resolvePack } from './packs'
+import { DEFAULT_PACK, SEASONAL_IDS, everydayPacks, packIds, resolvePack, seasonalPacks } from './packs'
 
 const PLUGIN = 'relay-panel'
 const PROGRESS = 'mcp__relay-panel__progress'
@@ -11,6 +11,9 @@ const pane = { title: '', isFocused: false, bodyColumns: 60, placement: 'dock', 
 // Local time; the seasons are local. June is off season: the everyday pack (clawd by default) shows.
 const at = (y: number, m: number, d: number, h = 0, min = 0) => new Date(y, m - 1, d, h, min).getTime()
 const JUNE = at(2026, 6, 1, 12)
+
+// The commands the plugin registered in the last session, by name.
+const specs = new Map<string, { name: string; description: string; argumentHint?: string; immediate?: true }>()
 
 // A session with a flow, one running relay worker and one planned task.
 // The plugin's store, kept here so a test can change it between session starts.
@@ -42,7 +45,16 @@ async function session($: Engine, on: On, store: Map<string, unknown> = new Map(
     return { value: { isPlaced: true } }
   })
   on('tool.register', (_$, e) => ({ value: { tool: String((e as { name?: string }).name) } }) as never)
-  on('command.register', (_$, e) => ({ value: { command: String((e as { name?: string }).name) } }) as never)
+  on('command.register', (_$, e) => {
+    const spec = e as { name: string; description: string; argumentHint?: string; immediate?: true }
+    specs.set(spec.name, spec)
+    return { value: { command: String(spec.name) } } as never
+  })
+  // The bottom of the describe chain answers with the input it is handed, as the engine does.
+  on('command.describe', (_$, e) => {
+    const { description, argumentHint, isHidden } = e as { description: string; argumentHint?: string; isHidden: boolean }
+    return { description, argumentHint, isHidden } as never
+  })
   on('agent.spawn', () => ({ model: 'claude-opus-5-5', agentId: 'a1' }))
   await $.session.start({ source: 'startup', cwd: '/repo', surface: 'desktop', isInteractive: true } as never)
   await $.tool.call({ tool: PROGRESS, title: 'Ship it', phase: 'delegate', tasks: [{ title: 'Fix the parser bug', tier: 'medium' }, { title: 'Wire the CLI', tier: 'light' }] } as never)
@@ -105,7 +117,7 @@ test('pack: writing another pack id to the atom redraws the mounted band and pan
   expect(p).not.toContain(scope(DEFAULT_PACK))
 })
 
-// --- swapping packs: the `pack` tool, /relay-pack and the gallery pane.
+// --- swapping packs: the `pack` tool, /relay-packs and the gallery pane.
 
 const PACK = 'mcp__relay-panel__pack'
 const other = (): string | undefined => packIds().find(id => id !== DEFAULT_PACK)
@@ -120,12 +132,36 @@ test('pack tool: list heads with the settings line, then every pack, the one sho
   await session($, on)
   const [head, ...lines] = await listOf($)
   expect(head).toBe(`everyday: ${DEFAULT_PACK} · seasons on · showing: ${DEFAULT_PACK} · next: turkeys Nov 15`)
-  expect(lines.length).toBe(packIds().length)
+  // Every pack plus the `seasonal:` line.
+  expect(lines.length).toBe(packIds().length + 1)
   for (const id of packIds()) {
     const p = resolvePack(id)
     const line = lines.find(l => l.startsWith(`${id}: `))
     expect(line).toBe(`${id}: ${p.name}${id === DEFAULT_PACK ? ' (active)' : ''}`)
   }
+})
+
+test('pack tool: list prints the everyday packs, then `seasonal:`, then winter, turkeys, christmas', async ($, on) => {
+  await session($, on)
+  const [, ...lines] = await listOf($)
+  expect(lines.map(l => l.split(':')[0])).toEqual(['clawd', 'cats', 'dogs', 'adventurers', 'seasonal', 'winter', 'turkeys', 'christmas'])
+  expect(lines[4]).toBe('seasonal:')
+  expect(lines.slice(0, 4)).toEqual(everydayPacks().map(p => `${p.id}: ${p.name}${p.id === DEFAULT_PACK ? ' (active)' : ''}`))
+  expect(lines.slice(5)).toEqual(seasonalPacks().map(p => `${p.id}: ${p.name}`))
+})
+
+test('winter is listed as seasonal but stays an everyday pack and a shuffle candidate', async ($, on) => {
+  const store = new Map<string, unknown>()
+  await session($, on, store)
+  expect(SEASONAL_IDS).toContain('winter')
+  expect(await firstLine($)).toContain('everyday: clawd')
+  const all = (await $.tool.call({ tool: PACK, action: 'set', id: 'shuffle' } as never)) as { result: string }
+  expect(all.result).toContain('winter')
+  expect(all.result).not.toContain('turkeys')
+  const set = await $.command.run({ command: 'relay-packs', args: 'winter' } as never)
+  expect(set.text).toBe(`ok: everyday pack is ${nameOf('winter')}`)
+  expect(store.get('everyday')).toBe('winter')
+  expect((await listOf($)).filter(l => l.endsWith('(active)'))).toEqual([`winter: ${nameOf('winter')} (active)`])
 })
 
 test('pack tool: set stores the everyday pack and redraws the band and the panel', async ($, on) => {
@@ -173,39 +209,73 @@ test('pack tool: preview opens the gallery pane', async ($, on) => {
   expect(opened).toContain('relay-packs|Sprite packs')
 })
 
-test('/relay-pack: no args lists, <id> sets, an unknown id is refused, preview opens the gallery', async ($, on) => {
+test('/relay-packs: no args lists, <id> sets, an unknown id is refused, preview opens the gallery', async ($, on) => {
   const store = new Map<string, unknown>()
   const opened: string[] = []
   await session($, on, store, opened)
-  const list = await $.command.run({ command: 'relay-pack' } as never)
+  const list = await $.command.run({ command: 'relay-packs' } as never)
   expect(list.text).toContain(`${DEFAULT_PACK}: `)
   expect(list.text).toContain('(active)')
   expect(list.text?.split('\n')[0]).toBe(`everyday: ${DEFAULT_PACK} · seasons on · showing: ${DEFAULT_PACK} · next: turkeys Nov 15`)
 
-  const bad = await $.command.run({ command: 'relay-pack', args: 'dragons' } as never)
+  const bad = await $.command.run({ command: 'relay-packs', args: 'dragons' } as never)
   expect(bad.text).toContain('unknown pack "dragons"')
   expect(store.has('everyday')).toBe(false)
 
   const id = other()
   if (id) {
-    const set = await $.command.run({ command: 'relay-pack', args: id } as never)
+    const set = await $.command.run({ command: 'relay-packs', args: id } as never)
     expect(set.text).toBe(`ok: everyday pack is ${nameOf(id)}`)
     expect(store.get('everyday')).toBe(id)
   }
 
-  const usage = await $.command.run({ command: 'relay-pack', args: 'seasons maybe' } as never)
-  expect(usage.text).toBe('usage: /relay-pack seasons on|off')
+  const usage = await $.command.run({ command: 'relay-packs', args: 'seasons maybe' } as never)
+  expect(usage.text).toBe('usage: /relay-packs seasons on|off')
 
-  const prev = await $.command.run({ command: 'relay-pack', args: 'preview' } as never)
+  const prev = await $.command.run({ command: 'relay-packs', args: 'preview' } as never)
   expect(prev.text).toContain('gallery')
   expect(opened).toContain('relay-packs|Sprite packs')
 })
 
-test('/relay-pack: a stored pack that is gone is mentioned once', async ($, on) => {
+test('/relay-pack (the old name) lists, sets and previews like /relay-packs', async ($, on) => {
+  const store = new Map<string, unknown>()
+  const opened: string[] = []
+  await session($, on, store, opened)
+  const run = (command: string, args?: string) => $.command.run({ command, args } as never)
+  expect((await run('relay-pack')).text).toBe((await run('relay-packs')).text)
+  expect((await run('relay-pack', 'dragons')).text).toBe((await run('relay-packs', 'dragons')).text)
+  expect((await run('relay-pack', 'seasons maybe')).text).toBe('usage: /relay-packs seasons on|off')
+  expect((await run('relay-pack', 'cats')).text).toBe(`ok: everyday pack is ${nameOf('cats')}`)
+  expect(store.get('everyday')).toBe('cats')
+  expect((await run('relay-pack', 'preview')).text).toContain('gallery')
+  expect(opened).toContain('relay-packs|Sprite packs')
+})
+
+test('commands: relay-pack is hidden; relay-packs and relay-agents show with their argument hints', async ($, on) => {
+  await session($, on)
+  const describe = async (command: string) => {
+    const spec = specs.get(command)
+    expect(spec).toBeDefined()
+    return $.command.describe({ command, description: spec?.description ?? '', argumentHint: spec?.argumentHint, isHidden: false, immediate: spec?.immediate === true, provider: { plugin: PLUGIN, tier: 'plugin' } } as never)
+  }
+  const packs = await describe('relay-packs')
+  expect(packs.isHidden).toBe(false)
+  expect(packs.argumentHint).toBe('[preview | <id> | shuffle [ids] | seasons on|off]')
+  expect(specs.get('relay-packs')?.immediate).toBe(true)
+  const agents = await describe('relay-agents')
+  expect(agents.isHidden).toBe(false)
+  expect(agents.argumentHint).toBe('[open]')
+  expect(specs.get('relay-agents')?.immediate).toBe(true)
+  const old = await describe('relay-pack')
+  expect(old.isHidden).toBe(true)
+  expect(old.description).toBe('Old name for /relay-packs')
+})
+
+test('/relay-packs: a stored pack that is gone is mentioned once', async ($, on) => {
   await session($, on, new Map([['everyday', 'dodos']]))
-  const first = await $.command.run({ command: 'relay-pack' } as never)
+  const first = await $.command.run({ command: 'relay-packs' } as never)
   expect(first.text).toContain(`stored pack "dodos" is gone; using ${DEFAULT_PACK}`)
-  const second = await $.command.run({ command: 'relay-pack' } as never)
+  const second = await $.command.run({ command: 'relay-packs' } as never)
   expect(second.text).not.toContain('is gone')
 })
 
@@ -227,7 +297,7 @@ test('migration: an old pin shows all year out of season, and runs once', async 
   await session($, on, store)
   expect((await drawn($)).band).toContain(scope('cats'))
   // A later choice is not undone by a second session start.
-  await $.command.run({ command: 'relay-pack', args: 'dogs' } as never)
+  await $.command.run({ command: 'relay-packs', args: 'dogs' } as never)
   await resume($)
   expect(store.get('everyday')).toBe('dogs')
   expect((await drawn($)).band).toContain(scope('dogs'))
@@ -248,7 +318,7 @@ test('migration: an old pin whose pack is gone is mentioned once', async ($, on)
   await session($, on, store)
   expect(store.has('pack')).toBe(false)
   expect(store.has('everyday')).toBe(false)
-  const first = await $.command.run({ command: 'relay-pack' } as never)
+  const first = await $.command.run({ command: 'relay-packs' } as never)
   expect(first.text).toContain(`stored pack "dodos" is gone; using ${DEFAULT_PACK}`)
 })
 
@@ -345,12 +415,12 @@ test('seasons off: shows the everyday pack in December; auto turns them on again
   expect((await drawn($)).band).toContain(scope(DEFAULT_PACK))
   expect(await firstLine($)).toBe(`everyday: ${DEFAULT_PACK} · seasons off · showing: ${DEFAULT_PACK}`)
 
-  const auto = await $.command.run({ command: 'relay-pack', args: 'auto' } as never)
+  const auto = await $.command.run({ command: 'relay-packs', args: 'auto' } as never)
   expect(auto.text).toBe(`ok: seasons on; showing ${nameOf('christmas')}`)
   expect(store.get('seasons')).toBe(true)
   expect((await drawn($)).band).toContain(scope('christmas'))
 
-  const offCmd = await $.command.run({ command: 'relay-pack', args: 'seasons off' } as never)
+  const offCmd = await $.command.run({ command: 'relay-packs', args: 'seasons off' } as never)
   expect(offCmd.text).toBe(`ok: seasons off; showing ${nameOf(DEFAULT_PACK)}`)
   // Stored: the next session keeps seasons off.
   await resume($)
@@ -359,7 +429,7 @@ test('seasons off: shows the everyday pack in December; auto turns them on again
 
 test('seasons off: the season start passes and a new flow keeps the everyday pack', async ($, on) => {
   const clock = await session($, on, new Map(), [], at(2026, 11, 14, 23, 59))
-  await $.command.run({ command: 'relay-pack', args: 'seasons off' } as never)
+  await $.command.run({ command: 'relay-packs', args: 'seasons off' } as never)
   await clock.set(at(2026, 11, 15, 0, 1))
   await clock.settle()
   await newFlow($)
@@ -372,7 +442,7 @@ test('set during a season shows the pick now and skips the season until it ends'
   const store = new Map<string, unknown>()
   await session($, on, store, [], DEC)
   expect((await drawn($)).band).toContain(scope('christmas'))
-  const r = await $.command.run({ command: 'relay-pack', args: 'cats' } as never)
+  const r = await $.command.run({ command: 'relay-packs', args: 'cats' } as never)
   expect(r.text).toBe(`ok: ${nameOf('cats')} now; ${nameOf('christmas')} skipped until Dec 31`)
   expect(store.get('everyday')).toBe('cats')
   expect(store.get('skipSeason')).toBe('christmas:2026')
@@ -417,9 +487,9 @@ test('set during turkeys skips turkeys only: Christmas still comes on Dec 1', as
 test('seasons on lifts a skip, so the season shows again', async ($, on) => {
   const store = new Map<string, unknown>()
   await session($, on, store, [], DEC)
-  await $.command.run({ command: 'relay-pack', args: 'cats' } as never)
+  await $.command.run({ command: 'relay-packs', args: 'cats' } as never)
   expect((await drawn($)).band).toContain(scope('cats'))
-  const r = await $.command.run({ command: 'relay-pack', args: 'seasons on' } as never)
+  const r = await $.command.run({ command: 'relay-packs', args: 'seasons on' } as never)
   expect(r.text).toBe(`ok: seasons on; showing ${nameOf('christmas')}`)
   expect(store.has('skipSeason')).toBe(false)
   expect((await drawn($)).band).toContain(scope('christmas'))
@@ -428,7 +498,7 @@ test('seasons on lifts a skip, so the season shows again', async ($, on) => {
 test('set with seasons off in December skips nothing', async ($, on) => {
   const store = new Map<string, unknown>([['seasons', false]])
   await session($, on, store, [], DEC)
-  const r = await $.command.run({ command: 'relay-pack', args: 'cats' } as never)
+  const r = await $.command.run({ command: 'relay-packs', args: 'cats' } as never)
   expect(r.text).toBe(`ok: everyday pack is ${nameOf('cats')}`)
   expect(store.has('skipSeason')).toBe(false)
 })
@@ -471,7 +541,7 @@ test('shuffle: one pick per session; consecutive sessions differ; a new flow doe
 test('shuffle [ids]: stores the list, picks now, and a second shuffle picks the other', async ($, on) => {
   const store = new Map<string, unknown>()
   await session($, on, store)
-  const r = await $.command.run({ command: 'relay-pack', args: 'shuffle cats dogs' } as never)
+  const r = await $.command.run({ command: 'relay-packs', args: 'shuffle cats dogs' } as never)
   const first = String(store.get('lastShuffle'))
   expect(['cats', 'dogs']).toContain(first)
   expect(r.text).toBe(`ok: shuffling cats, dogs; ${nameOf(first)} now`)
@@ -496,7 +566,7 @@ test('shuffle [ids]: stores the list, picks now, and a second shuffle picks the 
 test('shuffle: holiday and unknown ids are refused, naming the valid ones; nothing is stored', async ($, on) => {
   const store = new Map<string, unknown>()
   await session($, on, store)
-  const r = await $.command.run({ command: 'relay-pack', args: 'shuffle turkeys dragons' } as never)
+  const r = await $.command.run({ command: 'relay-packs', args: 'shuffle turkeys dragons' } as never)
   expect(r.text).toBe(`cannot shuffle "turkeys" (holiday pack), "dragons" (unknown); valid ids: ${EVERYDAY_LIST}`)
   const t = (await $.tool.call({ tool: PACK, action: 'shuffle', ids: ['christmas'] } as never)) as { deny: string }
   expect(t.deny).toContain('"christmas" (holiday pack)')
@@ -547,6 +617,29 @@ test('gallery: one card per pack, labelled; Use sets the everyday pack', async (
   expect(altOf(c, DEFAULT_PACK)).toBe(nameOf(DEFAULT_PACK))
   expect(await ui.find({ key: `use-${DEFAULT_PACK}` })).toBeDefined()
   expect(await ui.find({ key: 'use-cats' })).toBeUndefined()
+  await ui.unmount()
+})
+
+test('gallery: everyday cards come first, then the Seasonal header, then the seasonal cards (desktop)', async ($, on) => {
+  await session($, on)
+  const ui = await $.ui.mount({ plugin: PLUGIN, surface: 'desktop', component: 'Pane', requestId: 'relay-packs', props: pane })
+  const idOf = (source: string) => packIds().find(id => source.includes(scope(id)))
+  const order = (await ui.findAll({})).flatMap(el =>
+    el.type === 'Svg' ? [idOf(String(el.props.source)) ?? '?'] : el.type === 'Text' && el.text === 'Seasonal' ? ['<Seasonal>'] : [],
+  )
+  expect(order).toEqual([...everydayPacks().map(p => p.id), '<Seasonal>', ...seasonalPacks().map(p => p.id)])
+  expect(order).toEqual(['clawd', 'cats', 'dogs', 'adventurers', '<Seasonal>', 'winter', 'turkeys', 'christmas'])
+  await ui.unmount()
+})
+
+test('gallery: everyday rows come first, then the Seasonal header, then the seasonal rows (terminal)', async ($, on) => {
+  await session($, on)
+  const ui = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', component: 'Pane', requestId: 'relay-packs', props: pane })
+  const names = new Map(packIds().map(id => [nameOf(id), id]))
+  const order = (await ui.findAll({ type: 'Text' })).flatMap(el => (el.text === 'Seasonal' ? ['<Seasonal>'] : names.has(el.text) ? [names.get(el.text) as string] : []))
+  expect(order).toEqual(['clawd', 'cats', 'dogs', 'adventurers', '<Seasonal>', 'winter', 'turkeys', 'christmas'])
+  // Use still sets the pack from a seasonal row.
+  expect(await ui.find({ key: 'use-winter' })).toBeDefined()
   await ui.unmount()
 })
 

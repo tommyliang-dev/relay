@@ -18,39 +18,24 @@ relay keeps that design and adds:
 
 ## Quick start
 
-Paste one of these prompts into Claude Code, either the terminal (CLI) or the Claude app. The prompt tells Claude what to do if the `claude` command is not available.
+Paste one of these prompts into Claude Code: the terminal, the Claude desktop app or an IDE extension. Claude works out where it is running and installs with the Claude Code CLI itself; it hands you a step only if it cannot run the CLI at all.
 
 ### Prompt 1: install
 
 ````
-Install relay for me:
+Install relay for me. Work out where you're running from your own context; don't ask me.
 
-1. Install the plugins. Run these in the shell:
-   claude plugin marketplace add tommyliang-dev/relay
-   claude plugin install relay@relay
-   claude plugin install relay-panel@relay
-   If the `claude` command is not found or fails (for example in the Claude app), do not stop. Give me these slash commands to type myself, then wait until I say they are done:
-   /plugin marketplace add tommyliang-dev/relay
-   /plugin install relay@relay
-   /plugin install relay-panel@relay
-2. If savvy-progress@claude-kit or another agents panel is enabled, tell me and ask before disabling it.
-3. Ask me how I want my worker models set up. Show me these four presets with the exact models (as of October 2026):
-   - Default: light Sonnet 5.5 low, medium Sonnet 5.5 medium, careful Sonnet 5.5 high, heavy Opus 5.5 high, expert Opus 5.5 xhigh.
-   - Baller: light Opus 5.5 low, medium Opus 5.5 medium, careful Opus 5.5 high, heavy Opus 5.5 xhigh, expert Fable 5.1 xhigh (needs Fable access).
-   - Budget: light Haiku 5.5 low, medium Haiku 5.5 medium, careful Sonnet 5.5 medium, heavy Sonnet 5.5 high, expert Opus 5.5 high.
+1. Install relay@relay and relay-panel@relay from the tommyliang-dev/relay marketplace: user scope, enabled, latest (update any already installed). Use `claude`, or else the path in $CLAUDE_CODE_EXECPATH, once `--version` says Claude Code. Show me the versions from plugin list.
+   Stop and tell me if a "relay" marketplace already points elsewhere, if a command fails (show the error), or if ~/.claude won't persist here (cloud or temporary environment; wait for my go-ahead). If you can't run the CLI at all, give me the /plugin commands to type in a Claude Code terminal and wait. "userConfig options not yet set" is harmless.
+2. If savvy-progress or another agents panel is enabled (plugin list, or loaded in this session), ask before disabling it.
+3. Ask which worker models I want; recommend Default, or Baller if I have Fable access. Tiers light / medium / careful / heavy / expert (models as of October 2026):
+   - Default: Sonnet 5.5 low / Sonnet 5.5 medium / Sonnet 5.5 high / Opus 5.5 high / Opus 5.5 xhigh
+   - Baller: Opus 5.5 low / Opus 5.5 medium / Opus 5.5 high / Opus 5.5 xhigh / Fable 5.1 xhigh
+   - Budget: Haiku 5.5 low / Haiku 5.5 medium / Sonnet 5.5 medium / Sonnet 5.5 high / Opus 5.5 high
    - Custom: I pick a model and effort per tier.
-   Recommend Default, unless I say I have Fable access; then recommend Baller.
-4. If I pick anything but Default, add a "## Relay models" block to ~/.claude/CLAUDE.md, one line per tier, like "- light: sonnet, low" (aliases: haiku, sonnet, opus, fable). Before you edit ~/.claude/CLAUDE.md:
-   - ask me where to save a backup copy, and recommend my Desktop (~/Desktop/CLAUDE.md.backup-<date>);
-   - save the backup and tell me its path;
-   - keep everything already in the file, and show me the diff before you save.
-5. Tell me to restart (terminal: exit and run `claude` again; Claude app: quit and reopen it).
-6. Give me a short tour:
-   - /relay <task> runs a task through relay.
-   - /relay-agents opens the agents panel.
-   - /relay-pack lists the sprite packs; /relay-pack shuffle, /relay-pack seasons on|off and /relay-pack preview.
-   - The seven sprite packs: cats, clawd, dogs, winter, adventurers, turkeys and christmas.
-   - Holiday packs show by themselves: turkeys Nov 15-30, Christmas in December, and my everyday pack the rest of the year (clawd unless I change it).
+4. For anything but Default, add a "## Relay models" block to my user CLAUDE.md (in ~/.claude, or CLAUDE_CONFIG_DIR if set), one line per tier like "- light: sonnet, low" (haiku, sonnet, opus or fable). If the file exists, back it up first (ask where; suggest CLAUDE.md.backup-<date> next to it). Keep what's there and show me the diff before saving.
+5. If relay hasn't loaded here (the relay skill and mcp__relay-panel__ tools), tell me how to load it: a new session, or a restart. If the panel never loads, my Claude Code is too old for mods.
+6. Short tour: /relay <task> (full name /relay:relay); /relay-agents [open] for the agents panel; /relay-packs [preview | <id> | shuffle | seasons on|off] for sprite packs: clawd, cats, dogs, adventurers, and seasonal winter, turkeys, christmas. Turkeys show Nov 15-30 and Christmas in December; my everyday pack (clawd) the rest of the year.
 ````
 
 Good for: trying relay with nothing global changed except an optional model block.
@@ -58,44 +43,26 @@ Good for: trying relay with nothing global changed except an optional model bloc
 ### Prompt 2: install and make relay the default way to delegate
 
 ````
-Install relay for me and make it my default way to delegate:
+Install relay for me and make it my default way to delegate. Work out where you're running from your own context; don't ask me.
 
-1. Install the plugins. Run these in the shell:
-   claude plugin marketplace add tommyliang-dev/relay
-   claude plugin install relay@relay
-   claude plugin install relay-panel@relay
-   If the `claude` command is not found or fails (for example in the Claude app), do not stop. Give me these slash commands to type myself, then wait until I say they are done:
-   /plugin marketplace add tommyliang-dev/relay
-   /plugin install relay@relay
-   /plugin install relay-panel@relay
-2. If savvy-progress@claude-kit or another agents panel is enabled, tell me and ask before disabling it.
-3. Ask me how I want my worker models set up. Show me these four presets with the exact models (as of October 2026):
-   - Default: light Sonnet 5.5 low, medium Sonnet 5.5 medium, careful Sonnet 5.5 high, heavy Opus 5.5 high, expert Opus 5.5 xhigh.
-   - Baller: light Opus 5.5 low, medium Opus 5.5 medium, careful Opus 5.5 high, heavy Opus 5.5 xhigh, expert Fable 5.1 xhigh (needs Fable access).
-   - Budget: light Haiku 5.5 low, medium Haiku 5.5 medium, careful Sonnet 5.5 medium, heavy Sonnet 5.5 high, expert Opus 5.5 high.
+1. Install relay@relay and relay-panel@relay from the tommyliang-dev/relay marketplace: user scope, enabled, latest (update any already installed). Use `claude`, or else the path in $CLAUDE_CODE_EXECPATH, once `--version` says Claude Code. Show me the versions from plugin list.
+   Stop and tell me if a "relay" marketplace already points elsewhere, if a command fails (show the error), or if ~/.claude won't persist here (cloud or temporary environment; wait for my go-ahead). If you can't run the CLI at all, give me the /plugin commands to type in a Claude Code terminal and wait. "userConfig options not yet set" is harmless.
+2. If savvy-progress or another agents panel is enabled (plugin list, or loaded in this session), ask before disabling it.
+3. Ask which worker models I want; recommend Default, or Baller if I have Fable access. Tiers light / medium / careful / heavy / expert (models as of October 2026):
+   - Default: Sonnet 5.5 low / Sonnet 5.5 medium / Sonnet 5.5 high / Opus 5.5 high / Opus 5.5 xhigh
+   - Baller: Opus 5.5 low / Opus 5.5 medium / Opus 5.5 high / Opus 5.5 xhigh / Fable 5.1 xhigh
+   - Budget: Haiku 5.5 low / Haiku 5.5 medium / Sonnet 5.5 medium / Sonnet 5.5 high / Opus 5.5 high
    - Custom: I pick a model and effort per tier.
-   Recommend Default, unless I say I have Fable access; then recommend Baller.
-4. Edit ~/.claude/CLAUDE.md. Before you edit it:
-   - ask me where to save a backup copy, and recommend my Desktop (~/Desktop/CLAUDE.md.backup-<date>);
-   - save the backup and tell me its path;
-   - keep everything already in the file, and show me the diff before you save.
-   Then:
-   - If I picked anything but Default, add a "## Relay models" block, one line per tier, like "- light: sonnet, low" (aliases: haiku, sonnet, opus, fable).
-   - Add this section:
+4. Edit my user CLAUDE.md (in ~/.claude, or CLAUDE_CONFIG_DIR if set). If it exists, back it up first (ask where; suggest CLAUDE.md.backup-<date> next to it). Keep what's there and show me the diff before saving. For anything but Default, add a "## Relay models" block, one line per tier like "- light: sonnet, low" (haiku, sonnet, opus or fable). Always add this section:
 
      # Orchestration (relay)
      - Orchestrate: changes across several files or packages, new features, refactors, root-cause debugging, wide searches, or work that ends in a build or test run. Run the `relay` skill first: it plans, delegates to the tiered relay-* workers and reports to the relay-panel progress bar and agents panel.
      - Answer directly: questions, explanations, quick lookups and small edits.
      - A repo's own CLAUDE.md / AGENTS.md wins over this section.
 
-5. If another orchestrator would compete with relay (for example the savvy-flow-auto skill or savvy-flow@claude-kit), list it and ask me whether to disable it.
-6. Tell me to restart (terminal: exit and run `claude` again; Claude app: quit and reopen it).
-7. Give me a short tour:
-   - /relay <task> runs a task through relay.
-   - /relay-agents opens the agents panel.
-   - /relay-pack lists the sprite packs; /relay-pack shuffle, /relay-pack seasons on|off and /relay-pack preview.
-   - The seven sprite packs: cats, clawd, dogs, winter, adventurers, turkeys and christmas.
-   - Holiday packs show by themselves: turkeys Nov 15-30, Christmas in December, and my everyday pack the rest of the year (clawd unless I change it).
+5. If another orchestrator would compete with relay (such as savvy-flow or a savvy-flow-auto skill), ask before disabling it.
+6. If relay hasn't loaded here (the relay skill and mcp__relay-panel__ tools), tell me how to load it: a new session, or a restart. If the panel never loads, my Claude Code is too old for mods.
+7. Short tour: /relay <task> (full name /relay:relay); /relay-agents [open] for the agents panel; /relay-packs [preview | <id> | shuffle | seasons on|off] for sprite packs: clawd, cats, dogs, adventurers, and seasonal winter, turkeys, christmas. Turkeys show Nov 15-30 and Christmas in December; my everyday pack (clawd) the rest of the year.
 ````
 
 Good for: every session delegates the same way without typing `/relay`. The working rules live in the skill, so updating relay updates them.
@@ -153,15 +120,15 @@ expert runs on Opus 5.5 unless you choose Baller.
 | --- | --- |
 | `/relay <task>` | Runs the task through relay: plan, delegate, review. The full name is `/relay:relay`. |
 | `relay` skill | The same flow, triggered on its own when you ask for non-trivial work. |
-| `/relay-agents` | Opens or closes the agents panel. |
+| `/relay-agents` | Opens or closes the agents panel. Shows an argument hint and runs immediately, even mid-turn. |
 | `/relay-agents open` | Opens the panel, or brings it forward, without closing it. |
-| `/relay-pack` | Shows the pack settings and lists the packs. |
-| `/relay-pack <id>` | Makes that pack your everyday pack. |
-| `/relay-pack shuffle [ids]` | A random non-holiday pack each session, from all of them or the ids you give. |
-| `/relay-pack seasons on\|off` | Turns the holiday packs on or off. |
-| `/relay-pack auto` | Same as `seasons on`. |
-| `/relay-pack preview` | Opens a gallery of every pack. |
-| `relay-pack` skill | The same, in plain words: "use dogs", "shuffle my sprites", "turn off holidays". |
+| `/relay-packs` | Shows the pack settings and lists the packs: everyday packs, then a `seasonal:` group. `/relay-pack` still works as a hidden alias. |
+| `/relay-packs <id>` | Makes that pack your everyday pack. |
+| `/relay-packs shuffle [ids]` | A random non-holiday pack each session, from all of them or the ids you give. |
+| `/relay-packs seasons on\|off` | Turns the holiday packs on or off. |
+| `/relay-packs auto` | Same as `seasons on`. |
+| `/relay-packs preview` | Opens a gallery: everyday packs first, then a Seasonal section. |
+| `relay-packs` skill (model-only) | The same, in plain words: "use dogs", "shuffle my sprites", "turn off holidays". |
 | `mcp__relay-panel__progress` | The main session reports the plan, phase and accepted tasks to the progress bar. |
 | `mcp__relay-panel__step` | A worker reports its own steps to the agents panel. |
 | `mcp__relay-panel__pack` | Lists, sets, shuffles or previews sprite packs, and turns seasons on or off. |
@@ -181,11 +148,14 @@ Each sprite is dressed by its role. The main session is the conductor. When rela
 
 The role picks the character (or the costume, breed or colour), so the job reads at a glance. The tier colour tints part of the costume. A few characters also get a random look, fixed for each task.
 
-- **cats**: British Shorthairs. The role picks one of six coats.
 - **clawd** (the default everyday pack): the original crab, dressed by role: astronaut (conductor), engineer (builder), detective (fixer), racer (tester), pirate (scout), bare (plain).
+- **cats**: British Shorthairs. The role picks one of six coats.
 - **dogs**: the role picks the breed: Pomeranian (conductor), corgi (builder), shiba (fixer), bichon frise (tester), husky (scout), and Mabel the Australian shepherd (plain).
-- **winter**: a snowman conducts, a yeti builds, a polar bear fixes, a snowy owl tests, an arctic fox scouts, and penguins are everyone else.
 - **adventurers**: a magician conducts, a thief with twin daggers builds, a knight fixes, a healer tests, an archer scouts, and ninjas are everyone else.
+
+Seasonal (listed last in `/relay-packs` and the gallery):
+
+- **winter**: a snowman conducts, a yeti builds, a polar bear fixes, a snowy owl tests, an arctic fox scouts, and penguins are everyone else. Not a holiday pack: it can be your everyday pack or part of a shuffle.
 - **turkeys** (holiday): one turkey body; the role picks the heritage colour: bronze, bourbon red, slate, white holland, narragansett, royal palm.
 - **christmas** (holiday): Santa conducts, a gingerbread man builds, a nutcracker fixes, Mrs Claus tests, an elf scouts with a lantern, and reindeer are everyone else.
 
@@ -211,7 +181,7 @@ Set the starting values with the `pack` option (`clawd`, `cats`, `dogs`, `winter
 { "pluginConfigs": { "relay-panel": { "options": { "pack": "cats", "seasons": "on" } } } }
 ```
 
-A choice made with `/relay-pack` overrides the options and stays across sessions.
+A choice made with `/relay-packs` overrides the options and stays across sessions.
 
 ## More prompts
 
@@ -220,7 +190,7 @@ A choice made with `/relay-pack` overrides the options and stays across sessions
 For: getting the newest relay and relay-panel.
 
 ```
-Update relay for me: run "claude plugin marketplace update relay", then "claude plugin update relay@relay" and "claude plugin update relay-panel@relay". Tell me what changed, then tell me to restart Claude Code.
+Update relay for me. Use a Claude Code CLI from your shell: `claude` if it is on PATH, otherwise the path in CLAUDE_CODE_EXECPATH; check that `<cli> --version` says Claude Code before using either. Run plugin marketplace update relay, then plugin update relay@relay and plugin update relay-panel@relay, and tell me the versions before and after. If a command fails, show me the error and stop; only if you cannot run the CLI at all, give me the /plugin commands to type in a Claude Code terminal session. Then tell me how to load the new version where you are running: a new session, or a restart of Claude Code.
 ```
 
 ### Switch from savvy-flow
@@ -229,13 +199,14 @@ For: moving from savvy-flow and savvy-progress to relay.
 
 ```
 Switch me from savvy-flow to relay:
-1. Before you change anything, ask me where to save a backup of ~/.claude/CLAUDE.md, and recommend my Desktop (~/Desktop/CLAUDE.md.backup-<date>). Save it and tell me the path.
-2. Run: claude plugin marketplace add tommyliang-dev/relay, claude plugin install relay@relay, claude plugin install relay-panel@relay.
-3. Run: claude plugin disable savvy-flow@claude-kit and claude plugin disable savvy-progress@claude-kit.
-   For steps 2 and 3, if the `claude` command is not found or fails (for example in the Claude app), give me the same commands as /plugin slash commands (/plugin marketplace add ..., /plugin install ..., /plugin disable ...) to type myself, and wait until I say they are done.
+For steps 2 and 3, use a Claude Code CLI from your shell: `claude` if it is on PATH, otherwise the path in CLAUDE_CODE_EXECPATH; check that `<cli> --version` says Claude Code before using either. If a command fails, show me the error and stop; only if you cannot run the CLI at all, give me the same commands as /plugin commands to type in a Claude Code terminal session, and wait until I say they are done.
+
+1. Before you change anything, back up my user CLAUDE.md (in ~/.claude, or in CLAUDE_CONFIG_DIR if that is set): ask me where, recommend a copy next to it (CLAUDE.md.backup-<date>), save it and tell me the path.
+2. Run: plugin marketplace add tommyliang-dev/relay, plugin install relay@relay, plugin install relay-panel@relay (plugin update instead for any already installed).
+3. Run: plugin disable savvy-flow@claude-kit and plugin disable savvy-progress@claude-kit, skipping any that plugin list does not show.
 4. If I have a savvy-flow-auto skill in ~/.claude/skills, move it aside (for example to ~/.claude/skills-disabled/) instead of deleting it.
-5. In ~/.claude/CLAUDE.md, change references to savvy-flow, savvy-progress and their tools to relay, relay-panel and mcp__relay-panel__progress / step. Keep everything else, and show me the diff before you save.
-6. Keep all backups. Tell me where they are, then tell me to restart Claude Code.
+5. In my user CLAUDE.md, change references to savvy-flow, savvy-progress and their tools to relay, relay-panel and mcp__relay-panel__progress / step. Keep everything else, and show me the diff before you save.
+6. Keep all backups and tell me where they are. Then tell me how to load relay where you are running: a new session, or a restart of Claude Code.
 ```
 
 ### Set up relay for a team repo
@@ -263,10 +234,10 @@ For: removing relay and putting things back.
 
 ```
 Remove relay:
-1. If there is a CLAUDE.md backup on my Desktop (~/Desktop/CLAUDE.md.backup-*), ask me whether to restore it. Otherwise remove the "# Orchestration (relay)" and "## Relay models" sections from ~/.claude/CLAUDE.md. Show me the diff before you save.
-2. Run: claude plugin uninstall relay@relay and claude plugin uninstall relay-panel@relay. If the `claude` command is not found or fails (for example in the Claude app), give me /plugin uninstall relay@relay and /plugin uninstall relay-panel@relay to type myself, and wait until I say they are done.
+1. Remove the "# Orchestration (relay)" and "## Relay models" sections from my user CLAUDE.md (in ~/.claude, or in CLAUDE_CONFIG_DIR if that is set). If there is a CLAUDE.md.backup-* next to it or on my Desktop, tell me and ask whether to restore it instead: it may be older than other changes I made since. Show me the diff before you save.
+2. Use a Claude Code CLI from your shell: `claude` if it is on PATH, otherwise the path in CLAUDE_CODE_EXECPATH; check that `<cli> --version` says Claude Code before using either. Run plugin uninstall relay@relay and plugin uninstall relay-panel@relay. If a command fails, show me the error and stop; only if you cannot run the CLI at all, give me /plugin uninstall relay@relay and /plugin uninstall relay-panel@relay to type in a Claude Code terminal session, and wait until I say they are done.
 3. Re-enable anything relay setup disabled (for example savvy-flow@claude-kit or savvy-progress@claude-kit), and move back any skill that was moved aside. Ask me first.
-4. Tell me to restart (terminal: exit and run `claude` again; Claude app: quit and reopen it).
+4. Tell me how to finish unloading relay where you are running: a new session, or a restart of Claude Code.
 ```
 
 ### Make a new sprite pack
@@ -302,7 +273,7 @@ claude plugin disable savvy-flow@claude-kit
 ## Requirements and notes
 
 - Claude Code with mod support. A plain terminal draws the panel as text.
-- Restart Claude Code after you install.
+- After installing, start a new session; restart Claude Code if the relay commands do not show up.
 - Delegating costs more tokens than answering directly.
 - You need Fable access only for the Baller preset.
 

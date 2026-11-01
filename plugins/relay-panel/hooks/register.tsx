@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import { DEFAULT_PACK, PACKS, packById, packIds, resolvePack } from './packs'
+import { DEFAULT_PACK, everydayPacks, packById, packIds, resolvePack, seasonalPacks } from './packs'
 import { compact } from './packs/compact'
 import {
   OFF_SEASON,
@@ -123,6 +123,7 @@ const STRINGS = {
     showing: 'Showing',
     everyday: 'Everyday',
     holiday: 'Holiday',
+    seasonal: 'Seasonal',
     month: (m: number) => EN_MONTHS[m - 1],
     day: (m: number, d: number) => `${EN_SHORT[m - 1]} ${d}`,
     days: (m: number, a: number, b: number) => `${EN_SHORT[m - 1]} ${a}-${b}`,
@@ -162,6 +163,7 @@ const STRINGS = {
     showing: 'Сейчас',
     everyday: 'Повседневный',
     holiday: 'Праздник',
+    seasonal: 'Сезонные',
     month: (m: number) => RU_MONTHS[m - 1],
     day: (m: number, d: number) => `${d} ${RU_OF[m - 1]}`,
     days: (m: number, a: number, b: number) => `${a}-${b} ${RU_OF[m - 1]}`,
@@ -201,6 +203,7 @@ const STRINGS = {
     showing: 'מוצגת',
     everyday: 'יומיומית',
     holiday: 'חג',
+    seasonal: 'עונתיים',
     month: (m: number) => HE_MONTHS[m - 1],
     day: (m: number, d: number) => `${d} ב${HE_MONTHS[m - 1]}`,
     days: (m: number, a: number, b: number) => `${a}-${b} ב${HE_MONTHS[m - 1]}`,
@@ -1006,6 +1009,8 @@ export async function loadActivePack($: EngineInterface, options: { pack?: unkno
 let goneNote = ''
 
 const PACKS_PANE = 'relay-packs'
+// The command's name before /relay-packs; kept as a hidden alias.
+const OLD_PACKS_COMMAND = 'relay-pack'
 
 // The settings line that heads every list reply:
 // `everyday: cats · seasons on · showing: cats · next: turkeys Nov 15`.
@@ -1025,11 +1030,11 @@ async function settingsLine($: EngineInterface): Promise<string> {
   return parts.join(' · ')
 }
 
-// The settings, then every registered pack, one line each, the one showing marked.
+// The settings, the everyday packs, then `seasonal:` and the seasonal packs; one line each, the one showing marked.
 async function packList($: EngineInterface): Promise<string> {
   const active = await read($, pack)
-  const lines = PACKS.map(p => `${p.id}: ${p.name}${p.id === active ? ' (active)' : ''}`)
-  lines.unshift(await settingsLine($))
+  const line = (p: Pack) => `${p.id}: ${p.name}${p.id === active ? ' (active)' : ''}`
+  const lines = [await settingsLine($), ...everydayPacks().map(line), 'seasonal:', ...seasonalPacks().map(line)]
   if (goneNote) {
     lines.unshift(goneNote)
     goneNote = ''
@@ -1101,7 +1106,7 @@ async function setSeasons($: EngineInterface, on: boolean): Promise<Reply> {
   return { ok: true, text: `ok: seasons ${on ? 'on' : 'off'}; showing ${resolvePack(r.id).name}` }
 }
 
-// The words /relay-pack and the tool's `set` take: a pack id, `shuffle`, or `auto` (seasons on).
+// The words /relay-packs and the tool's `set` take: a pack id, `shuffle`, or `auto` (seasons on).
 async function setByWord($: EngineInterface, word: string): Promise<Reply> {
   if (word === AUTO) return setSeasons($, true)
   if (word === SHUFFLE) return setShuffle($, [])
@@ -1123,6 +1128,20 @@ function cardLabels(p: Pack, active: string): CardLabel[] {
 async function openGallery($: EngineInterface): Promise<string> {
   await $.ui.open({ id: PACKS_PANE, title: tr().packs })
   return 'Sprite pack gallery opened.'
+}
+
+// The handler of /relay-packs and of its old name /relay-pack.
+async function runPacks($: EngineInterface, e: { args?: string }): Promise<{ text: string }> {
+  const arg = (e.args ?? '').trim()
+  if (!arg || arg === 'list') return { text: await packList($) }
+  if (arg === 'preview') return { text: await openGallery($) }
+  const [word = '', ...rest] = arg.split(/[\s,]+/).filter(Boolean)
+  if (word === 'shuffle') return { text: (await setShuffle($, rest)).text }
+  if (word === 'seasons') {
+    if (rest.length === 1 && (rest[0] === 'on' || rest[0] === 'off')) return { text: (await setSeasons($, rest[0] === 'on')).text }
+    return { text: 'usage: /relay-packs seasons on|off' }
+  }
+  return { text: (await setByWord($, arg)).text }
 }
 
 export const register: Register = (on, options) => {
@@ -1188,6 +1207,8 @@ export const register: Register = (on, options) => {
     await $.command.register({
       name: 'relay-agents',
       description: 'Show or hide the panel of subagents: running, finished and planned, with model, context, cost and time',
+      argumentHint: '[open]',
+      immediate: true,
     })
     await $.tool.register({
       name: 'pack',
@@ -1212,9 +1233,18 @@ export const register: Register = (on, options) => {
       },
     })
     await $.command.register({
-      name: 'relay-pack',
+      name: 'relay-packs',
       description:
-        'List the sprite packs, set the everyday pack with /relay-pack <id>, shuffle with /relay-pack shuffle [ids], turn holiday packs on or off with /relay-pack seasons on|off, or open the gallery with /relay-pack preview',
+        'List the sprite packs, set the everyday pack with /relay-packs <id>, shuffle with /relay-packs shuffle [ids], turn holiday packs on or off with /relay-packs seasons on|off, or open the gallery with /relay-packs preview',
+      argumentHint: '[preview | <id> | shuffle [ids] | seasons on|off]',
+      immediate: true,
+    })
+    // The old name, served by the same handler and hidden from the typeahead and /help.
+    await $.command.register({
+      name: OLD_PACKS_COMMAND,
+      description: 'Old name for /relay-packs',
+      argumentHint: '[preview | <id> | shuffle [ids] | seasons on|off]',
+      immediate: true,
     })
 
     // Ticks the running agents' clocks; quiet when nothing runs.
@@ -1241,18 +1271,12 @@ export const register: Register = (on, options) => {
     return { text: isOpen ? tr().opened : tr().closed }
   })
 
-  on('command.run', { command: 'relay-pack' }, async ($, e) => {
-    const arg = (e.args ?? '').trim()
-    if (!arg || arg === 'list') return { text: await packList($) }
-    if (arg === 'preview') return { text: await openGallery($) }
-    const [word = '', ...rest] = arg.split(/[\s,]+/).filter(Boolean)
-    if (word === 'shuffle') return { text: (await setShuffle($, rest)).text }
-    if (word === 'seasons') {
-      if (rest.length === 1 && (rest[0] === 'on' || rest[0] === 'off')) return { text: (await setSeasons($, rest[0] === 'on')).text }
-      return { text: 'usage: /relay-pack seasons on|off' }
-    }
-    return { text: (await setByWord($, arg)).text }
-  })
+  // /relay-packs and its old name /relay-pack run the same handler.
+  on('command.run', { command: 'relay-packs' }, runPacks)
+  on('command.run', { command: OLD_PACKS_COMMAND }, runPacks)
+
+  // Only the old name is hidden; the answer is cached for the session, and it never changes.
+  on('command.describe', { command: OLD_PACKS_COMMAND }, (_$, e, next) => next({ ...e, isHidden: true }))
 
   on('tool.call', { tool: PACK_TOOL }, async ($, e) => {
     const input = e as unknown as { action?: string; id?: string; ids?: unknown; on?: unknown }
@@ -1283,47 +1307,59 @@ export const register: Register = (on, options) => {
     const hasUse = (p: Pack) => p.id !== cfg.everyday
     const use = (p: Pack) => <Button key={`use-${p.id}`} label={s.use} onPress={() => void setEveryday($, p.id)} />
     const align = isRtl() ? 'flex-end' : undefined
+    // The everyday packs, then the "Seasonal" header, then the seasonal packs.
+    const header = (
+      <Text key="seasonal-header" bold>
+        {s.seasonal}
+      </Text>
+    )
 
     if (e.surface !== 'terminal' && 'Svg' in ui) {
       const { Svg } = ui
       const W = Math.max(240, Math.min(900, (e.props.bodyColumns || 40) * 8 - 8))
+      const card = (p: Pack) => {
+        const labels = cardLabels(p, active)
+        return (
+          <Box key={p.id} flexDirection="column" gap={1} alignItems={align}>
+            <Svg
+              key={`card-${p.id}`}
+              source={packCardSvg(p, W, labels)}
+              alt={`${p.name}${labels.length ? `, ${labelText(labels)}` : ''}`}
+              width={W}
+              height={CARD_H}
+            />
+            {hasUse(p) && use(p)}
+          </Box>
+        )
+      }
       return (
         <Box flexDirection="column" gap={1} alignItems={align}>
-          {PACKS.map(p => {
-            const labels = cardLabels(p, active)
-            return (
-              <Box key={p.id} flexDirection="column" gap={1} alignItems={align}>
-                <Svg
-                  key={`card-${p.id}`}
-                  source={packCardSvg(p, W, labels)}
-                  alt={`${p.name}${labels.length ? `, ${labelText(labels)}` : ''}`}
-                  width={W}
-                  height={CARD_H}
-                />
-                {hasUse(p) && use(p)}
-              </Box>
-            )
-          })}
+          {everydayPacks().map(card)}
+          {header}
+          {seasonalPacks().map(card)}
         </Box>
       )
     }
 
+    const row = (p: Pack) => {
+      const labels = cardLabels(p, active)
+      return (
+        <Box key={p.id} flexDirection="row" gap={1}>
+          <Text bold>{p.name}</Text>
+          {labels.map(l => (
+            <Text key={l.text} color={l.isOn ? DONE : undefined} dimColor={!l.isOn}>
+              {l.text}
+            </Text>
+          ))}
+          {hasUse(p) && use(p)}
+        </Box>
+      )
+    }
     return (
       <Box flexDirection="column" gap={1}>
-        {PACKS.map(p => {
-          const labels = cardLabels(p, active)
-          return (
-            <Box key={p.id} flexDirection="row" gap={1}>
-              <Text bold>{p.name}</Text>
-              {labels.map(l => (
-                <Text key={l.text} color={l.isOn ? DONE : undefined} dimColor={!l.isOn}>
-                  {l.text}
-                </Text>
-              ))}
-              {hasUse(p) && use(p)}
-            </Box>
-          )
-        })}
+        {everydayPacks().map(row)}
+        {header}
+        {seasonalPacks().map(row)}
       </Box>
     )
   })

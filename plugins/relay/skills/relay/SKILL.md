@@ -1,6 +1,6 @@
 ---
 name: relay
-description: Use for non-trivial coding work: changes spanning several files or packages, new features, refactors, root-cause debugging, or anything that needs wide search plus implementation plus a build or test run. Plans the work, delegates it to the tiered relay-* worker subagents (which draw the agents panel and progress bar) and reviews what they return. Skip for questions, explanations, quick lookups and small single-file edits, which are answered directly.
+description: "Use for non-trivial coding work: changes spanning several files or packages, new features, refactors, root-cause debugging, or anything that needs wide search plus implementation plus a build or test run. Plans the work, delegates it to the tiered relay-* worker subagents (which draw the agents panel and progress bar) and reviews what they return. Skip for questions, explanations, quick lookups and small single-file edits, which are answered directly."
 argument-hint: <task description, optional>
 ---
 
