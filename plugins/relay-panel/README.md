@@ -7,15 +7,15 @@ A Claude Code mod: a progress bar above the prompt and a live panel of subagents
 
 Only `relay-*` workers count as tiered. Every other subagent shows as `other`.
 
-Each sprite wears a costume for its role. The main session is the **conductor**. The orchestrator gives every planned task a role, and a worker wears the role of the task it runs: **builder** (features, changes), **fixer** (debugging, root cause), **tester** (builds, tests, checks) or **scout** (searching, reading code). A worker with no matching task is a builder. The built-in Explore agent is a scout; any other subagent is **plain**. The role picks the character (or the costume, breed or colour), so the job reads at a glance. The tier colour tints one piece of it. A few characters also get a random look, fixed for each task.
+Each sprite wears a costume for its role. The main session is the **conductor**. The orchestrator gives every planned task a role, and a worker wears the role of the task it runs: **builder** (features, changes), **fixer** (debugging, root cause), **tester** (builds, tests, checks) or **scout** (searching, reading code). A worker with no matching task is a builder. The built-in Explore agent is a scout; any other subagent is **plain**. The role picks the character (or the costume, breed or colour), so the job reads at a glance. The tier colour tints part of the costume. A few characters also get a random look, fixed for each task.
 
 ## Sprite packs
 
 - **cats**: British Shorthairs in profile. The role picks one of six coats; the conductor wears a top hat and conducts with a baton, the builder has headphones and a laptop, the fixer a flat cap, the tester spectacles, and the scout a pirate bandana.
 - **clawd** (the default everyday pack): the original crab, dressed by role: astronaut (conductor), engineer (builder), detective (fixer), racer (tester), pirate (scout), bare (plain).
 - **dogs**: the role picks the breed: Pomeranian (conductor), corgi (builder), shiba (fixer), bichon frise (tester), husky (scout), and Mabel the Australian shepherd (plain).
-- **winter**: front-facing snowman (conductor), yeti (builder), polar bear (fixer), snow owl (tester), arctic fox (scout) and penguin (plain). They hold no props.
-- **adventurers**: front-facing magician (conductor), the Thief (builder; a shadow assassin with twin daggers, a pixel-art tribute to Sung Jin-Woo from Solo Leveling), knight (fixer), healer (tester), archer (scout) and ninja (plain).
+- **winter**: front-facing snowman (conductor), yeti (builder), polar bear (fixer), snowy owl (tester), arctic fox (scout) and penguin (plain). They hold no props.
+- **adventurers**: front-facing magician (conductor), thief with twin daggers (builder), knight (fixer), healer (tester), archer (scout) and ninja (plain).
 - **turkeys** (holiday, Nov 15-30): one turkey body with a fanned tail; the role picks the heritage colour: bronze (conductor), bourbon red (builder), slate (fixer), white holland (tester), narragansett (scout), royal palm (plain).
 - **christmas** (holiday, December): Santa (conductor), a gingerbread man with a peppermint mallet (builder), a nutcracker with the same mallet (fixer), Mrs Claus with a test tube (tester), an elf with a lantern (scout) and reindeer (plain). The gingerbread, elf and reindeer get a random look from six.
 

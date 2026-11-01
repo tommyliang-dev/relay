@@ -319,15 +319,20 @@ const compactRun = (run: string): string => {
   return out
 }
 
-// Sprites repeat across cards, and the work above is not cheap, so each markup is done once.
+// The work above takes milliseconds per sprite, and a running row redraws every second with new
+// text around the same rects, so the cache is keyed by run, not by the whole markup. It holds one
+// entry per distinct sprite look, and is cleared if it ever grows past MEMO_MAX.
+const MEMO_MAX = 4096
 const memo = new Map<string, string>()
-
-// Rewrites every run of plain rects in `svg`; the rest of the markup passes through untouched.
-export const compact = (svg: string): string => {
-  let hit = memo.get(svg)
+const compactRunOnce = (run: string): string => {
+  let hit = memo.get(run)
   if (hit === undefined) {
-    hit = svg.replace(RUN, compactRun)
-    memo.set(svg, hit)
+    if (memo.size >= MEMO_MAX) memo.clear()
+    hit = compactRun(run)
+    memo.set(run, hit)
   }
   return hit
 }
+
+// Rewrites every run of plain rects in `svg`; the rest of the markup passes through untouched.
+export const compact = (svg: string): string => svg.replace(RUN, compactRunOnce)

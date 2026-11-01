@@ -421,7 +421,7 @@ const rowSvg = (f: Flow, W: number, isWorking: boolean, p: Pack): string => {
   // `direction="rtl"` puts Hebrew words and numbers in reading order; `start` is then the right edge.
   const titleAt = rtl ? `x="${W - 16}" direction="rtl" text-anchor="start"` : 'x="16"'
   const percentAt = rtl ? `x="${CAT_SLOT + 6}" y="${H / 2 + 4.5}"` : `x="${W - CAT_SLOT - 6}" y="${H / 2 + 4.5}" text-anchor="end"`
-  // The band's sprite is the conductor, in the pack's first pick ('' gives the cats' blue coat).
+  // The band's sprite is the conductor, always drawn with seed 0.
   const sprite = p.draw(rx(W - CAT_SLOT + 1, fit.w), fit.y, { role: 'conductor', tier: 'other' }, {
     seed: 0,
     accent: '#7F77DD',
@@ -693,7 +693,7 @@ const rowCat = (
 const COMPACT_H = 32
 
 // A pane over 100,000 characters draws nothing and says nothing, so the sprites go through
-// `compact` (the gallery's five cards were ~330,000 before it).
+// `compact` (the gallery's cards were ~330,000 before it).
 const svg = (p: Pack, W: number, H: number, body: string): string =>
   `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${PANE_CSS}${p.css}${compact(body)}</svg>`
 
@@ -1296,7 +1296,7 @@ export const register: Register = (on, options) => {
                 <Svg
                   key={`card-${p.id}`}
                   source={packCardSvg(p, W, labels)}
-                  alt={`${p.name}${labels.length ? `: ${labelText(labels)}` : ''}`}
+                  alt={`${p.name}${labels.length ? `, ${labelText(labels)}` : ''}`}
                   width={W}
                   height={CARD_H}
                 />

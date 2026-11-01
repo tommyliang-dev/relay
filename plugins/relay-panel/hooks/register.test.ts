@@ -173,9 +173,9 @@ test('desktop: the tier fable is read as expert, in plans and in agent types', a
 
   const ui = await $.ui.mount({ plugin: PLUGIN, surface: 'desktop', component: 'Pane', requestId: 'relay-agents', props: pane })
   const drawn = (await ui.findAll({ type: 'Svg' })).map(el => String(el.props.source)).join('')
-  // Two planned rows and one run, all expert: purple, the astronaut Clawd, Opus · xhigh for the plans.
+  // Two planned rows and one run, all expert: purple tier text, Clawd builders, Opus · xhigh for the plans.
   expect(drawn.split('<tspan fill="#7F77DD">expert</tspan>').length).toBe(4)
-  expect(drawn.split('class="c-expert').length).toBe(4)
+  expect(drawn.split('class="c-builder').length).toBe(4)
   expect(drawn).toContain('Opus · xhigh')
   expect(drawn).not.toMatch(/fable/i)
 })

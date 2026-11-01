@@ -179,13 +179,13 @@ Each sprite is dressed by its role. The main session is the conductor. When rela
 | scout | searching and reading code; also the Explore agent |
 | plain | any other subagent |
 
-The role picks the character (or the costume, breed or colour), so the job reads at a glance. The tier colour tints one piece of it. A few characters also get a random look, fixed for each task.
+The role picks the character (or the costume, breed or colour), so the job reads at a glance. The tier colour tints part of the costume. A few characters also get a random look, fixed for each task.
 
 - **cats**: British Shorthairs. The role picks one of six coats.
 - **clawd** (the default everyday pack): the original crab, dressed by role: astronaut (conductor), engineer (builder), detective (fixer), racer (tester), pirate (scout), bare (plain).
 - **dogs**: the role picks the breed: Pomeranian (conductor), corgi (builder), shiba (fixer), bichon frise (tester), husky (scout), and Mabel the Australian shepherd (plain).
-- **winter**: a snowman conducts, a yeti builds, a polar bear fixes, a snow owl tests, an arctic fox scouts, and penguins are everyone else.
-- **adventurers**: a magician conducts, the Thief builds (a shadow assassin with twin daggers, a pixel-art tribute to Sung Jin-Woo from Solo Leveling), a knight fixes, a healer tests, an archer scouts, and ninjas are everyone else.
+- **winter**: a snowman conducts, a yeti builds, a polar bear fixes, a snowy owl tests, an arctic fox scouts, and penguins are everyone else.
+- **adventurers**: a magician conducts, a thief with twin daggers builds, a knight fixes, a healer tests, an archer scouts, and ninjas are everyone else.
 - **turkeys** (holiday): one turkey body; the role picks the heritage colour: bronze, bourbon red, slate, white holland, narragansett, royal palm.
 - **christmas** (holiday): Santa conducts, a gingerbread man builds, a nutcracker fixes, Mrs Claus tests, an elf scouts with a lantern, and reindeer are everyone else.
 
