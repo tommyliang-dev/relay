@@ -11,7 +11,8 @@ plugins/
   relay-panel/                         mod: band + agents panel + sprite packs
     .claude-plugin/plugin.json         userConfig: language, autoOpen, pack, seasons
     hooks/hooks.json                   loads register.tsx
-    hooks/register.tsx                 band, panel, tools (progress, step, pack), commands, gallery
+    hooks/register.tsx                 band, panel, tools (progress, step, pack), /relay subcommand interceptor, gallery
+    hooks/subcommands.ts               parses /relay agents | preview | pack ...; loose pack names
     hooks/*.test.ts(x)                 panel, band, tools, cost and caller tests
     hooks/packs/types.ts               Pack, Role, Tier, DrawOptions
     hooks/packs/index.ts               registry: packs (everyday first, then seasonal), default pack, lookup
@@ -27,7 +28,6 @@ plugins/
     hooks/packs/packs.test.ts          one test that runs over every pack
     hooks/packs/compact.test.ts        compacted markup paints the same pixels as the rects
     hooks/packs/seasons.test.ts        holiday table and pack resolution
-    skills/relay-packs/SKILL.md        list / preview / swap packs (model-only skill)
     types/index.d.ts                   panel state types
     README.md
 scripts/preview.ts                     renders the pack galleries into docs/preview/ (gitignored)

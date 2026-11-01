@@ -11,9 +11,11 @@ relay keeps that design and adds:
 - sprite packs
 - seasonal holiday packs
 - an everyday pack and shuffle
-- a pack gallery
+- a pack gallery, everyday packs first and seasonal ones last
+- one `/relay` command: `/relay <task>` delegates, and `/relay agents`, `/relay preview` and `/relay pack …` run instantly, with no model turn
 - the orchestration rules, built into the skill
 - model presets
+- setup prompts that work in the terminal, the desktop app or an IDE: Claude finds the CLI itself
 - renamed tools, so it installs next to the originals
 
 ## Quick start
@@ -35,7 +37,7 @@ Install relay for me. Work out where you're running from your own context; don't
    - Custom: I pick a model and effort per tier.
 4. For anything but Default, add a "## Relay models" block to my user CLAUDE.md (in ~/.claude, or CLAUDE_CONFIG_DIR if set), one line per tier like "- light: sonnet, low" (haiku, sonnet, opus or fable). If the file exists, back it up first (ask where; suggest CLAUDE.md.backup-<date> next to it). Keep what's there and show me the diff before saving.
 5. If relay hasn't loaded here (the relay skill and mcp__relay-panel__ tools), tell me how to load it: a new session, or a restart. If the panel never loads, my Claude Code is too old for mods.
-6. Short tour: /relay <task> (full name /relay:relay); /relay-agents [open] for the agents panel; /relay-packs [preview | <id> | shuffle | seasons on|off] for sprite packs: clawd, cats, dogs, adventurers, and seasonal winter, turkeys, christmas. Turkeys show Nov 15-30 and Christmas in December; my everyday pack (clawd) the rest of the year.
+6. Short tour: /relay <task> (full name /relay:relay); /relay agents [open]; /relay preview; /relay pack [name | shuffle | seasonal on|off] for sprite packs: clawd, cats, dogs, adventurers, and seasonal winter, turkeys, christmas. Turkeys show Nov 15-30 and Christmas in December; my everyday pack (clawd) the rest of the year.
 ````
 
 Good for: trying relay with nothing global changed except an optional model block.
@@ -62,7 +64,7 @@ Install relay for me and make it my default way to delegate. Work out where you'
 
 5. If another orchestrator would compete with relay (such as savvy-flow or a savvy-flow-auto skill), ask before disabling it.
 6. If relay hasn't loaded here (the relay skill and mcp__relay-panel__ tools), tell me how to load it: a new session, or a restart. If the panel never loads, my Claude Code is too old for mods.
-7. Short tour: /relay <task> (full name /relay:relay); /relay-agents [open] for the agents panel; /relay-packs [preview | <id> | shuffle | seasons on|off] for sprite packs: clawd, cats, dogs, adventurers, and seasonal winter, turkeys, christmas. Turkeys show Nov 15-30 and Christmas in December; my everyday pack (clawd) the rest of the year.
+7. Short tour: /relay <task> (full name /relay:relay); /relay agents [open]; /relay preview; /relay pack [name | shuffle | seasonal on|off] for sprite packs: clawd, cats, dogs, adventurers, and seasonal winter, turkeys, christmas. Turkeys show Nov 15-30 and Christmas in December; my everyday pack (clawd) the rest of the year.
 ````
 
 Good for: every session delegates the same way without typing `/relay`. The working rules live in the skill, so updating relay updates them.
@@ -120,18 +122,20 @@ expert runs on Opus 5.5 unless you choose Baller.
 | --- | --- |
 | `/relay <task>` | Runs the task through relay: plan, delegate, review. The full name is `/relay:relay`. |
 | `relay` skill | The same flow, triggered on its own when you ask for non-trivial work. |
-| `/relay-agents` | Opens or closes the agents panel. Shows an argument hint and runs immediately, even mid-turn. |
-| `/relay-agents open` | Opens the panel, or brings it forward, without closing it. |
-| `/relay-packs` | Shows the pack settings and lists the packs: everyday packs, then a `seasonal:` group. `/relay-pack` still works as a hidden alias. |
-| `/relay-packs <id>` | Makes that pack your everyday pack. |
-| `/relay-packs shuffle [ids]` | A random non-holiday pack each session, from all of them or the ids you give. |
-| `/relay-packs seasons on\|off` | Turns the holiday packs on or off. |
-| `/relay-packs auto` | Same as `seasons on`. |
-| `/relay-packs preview` | Opens a gallery: everyday packs first, then a Seasonal section. |
-| `relay-packs` skill (model-only) | The same, in plain words: "use dogs", "shuffle my sprites", "turn off holidays". |
+| `/relay agents` | Opens or closes the agents panel. Handled by relay-panel instantly, no model turn. |
+| `/relay agents open` | Opens the panel, or brings it forward, without closing it. |
+| `/relay preview` | Opens the sprite pack gallery: everyday packs first, then a Seasonal section. `/relay pack preview` works too. |
+| `/relay pack` | Shows the pack settings and lists the packs: everyday packs, then a `seasonal:` group. Also `/relay pack list`. |
+| `/relay pack <name>` | Makes that pack your everyday pack. Names are loose (cat → cats, crab → clawd, xmas → christmas, thanksgiving → turkeys); an unknown name shows the pack list. |
+| `/relay pack shuffle [names]` | A random non-holiday pack each session, from all of them or the names you give. |
+| `/relay pack seasonal on|off` | Turns the holiday packs on or off (`seasons` also works; `/relay pack auto` is `on`). |
 | `mcp__relay-panel__progress` | The main session reports the plan, phase and accepted tasks to the progress bar. |
 | `mcp__relay-panel__step` | A worker reports its own steps to the agents panel. |
-| `mcp__relay-panel__pack` | Lists, sets, shuffles or previews sprite packs, and turns seasons on or off. |
+| `mcp__relay-panel__pack` | Lists, sets, shuffles or previews sprite packs, and turns seasons on or off. Claude uses it when you ask in plain words ("use the dogs", "turn off holidays"); names are loose, as with `/relay pack`. |
+
+How it works: relay-panel watches `/relay` submissions. An exact subcommand match runs instantly with no model turn; anything else, such as `/relay pack the release into a zip`, goes to the relay skill as a task. If relay-panel is not installed, the relay skill tells you so instead of orchestrating.
+
+**Upgrading to 0.7.0** (relay-panel 0.7.0, relay 0.4.2): `/relay-agents` is now `/relay agents`, `/relay-packs` is now `/relay pack` (and `/relay preview` for the gallery), and `/relay-pack` is now `/relay pack`; the `seasons` argument is `seasonal` (`seasons` still works). The old commands are removed, with no aliases. The `relay-packs` skill is removed too: a mod command cannot share a name with a skill, which is why `/relay-packs` failed in 0.6.0. Plain-word requests now go straight to the `pack` tool.
 
 ## Sprite packs
 
@@ -153,7 +157,7 @@ The role picks the character (or the costume, breed or colour), so the job reads
 - **dogs**: the role picks the breed: Pomeranian (conductor), corgi (builder), shiba (fixer), bichon frise (tester), husky (scout), and Mabel the Australian shepherd (plain).
 - **adventurers**: a magician conducts, a thief with twin daggers builds, a knight fixes, a healer tests, an archer scouts, and ninjas are everyone else.
 
-Seasonal (listed last in `/relay-packs` and the gallery):
+Seasonal (listed last in `/relay pack` and the gallery):
 
 - **winter**: a snowman conducts, a yeti builds, a polar bear fixes, a snowy owl tests, an arctic fox scouts, and penguins are everyone else. Not a holiday pack: it can be your everyday pack or part of a shuffle.
 - **turkeys** (holiday): one turkey body; the role picks the heritage colour: bronze, bourbon red, slate, white holland, narragansett, royal palm.
@@ -181,7 +185,7 @@ Set the starting values with the `pack` option (`clawd`, `cats`, `dogs`, `winter
 { "pluginConfigs": { "relay-panel": { "options": { "pack": "cats", "seasons": "on" } } } }
 ```
 
-A choice made with `/relay-packs` overrides the options and stays across sessions.
+A choice made with `/relay pack` overrides the options and stays across sessions.
 
 ## More prompts
 
@@ -225,7 +229,7 @@ Set up relay for this repo's team:
 For: seeing the agents panel and sprites without real work.
 
 ```
-Show me the relay agents panel: open it with /relay-agents, then start a few demo workers, one per tier (relay-light, relay-medium, relay-careful, relay-heavy, relay-expert) plus one Explore agent. Each one only reports a few steps with mcp__relay-panel__step and changes nothing.
+Show me the relay agents panel: open it with /relay agents, then start a few demo workers, one per tier (relay-light, relay-medium, relay-careful, relay-heavy, relay-expert) plus one Explore agent. Each one only reports a few steps with mcp__relay-panel__step and changes nothing.
 ```
 
 ### Uninstall or undo

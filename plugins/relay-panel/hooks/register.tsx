@@ -3,6 +3,8 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import { DEFAULT_PACK, everydayPacks, packById, packIds, resolvePack, seasonalPacks } from './packs'
 import { compact } from './packs/compact'
+import { isRelayCommand, looseId, parseRelayArgs } from './subcommands'
+import type { RelayAction } from './subcommands'
 import {
   OFF_SEASON,
   SEASONS,
@@ -1009,8 +1011,6 @@ export async function loadActivePack($: EngineInterface, options: { pack?: unkno
 let goneNote = ''
 
 const PACKS_PANE = 'relay-packs'
-// The command's name before /relay-packs; kept as a hidden alias.
-const OLD_PACKS_COMMAND = 'relay-pack'
 
 // The settings line that heads every list reply:
 // `everyday: cats · seasons on · showing: cats · next: turkeys Nov 15`.
@@ -1106,7 +1106,7 @@ async function setSeasons($: EngineInterface, on: boolean): Promise<Reply> {
   return { ok: true, text: `ok: seasons ${on ? 'on' : 'off'}; showing ${resolvePack(r.id).name}` }
 }
 
-// The words /relay-packs and the tool's `set` take: a pack id, `shuffle`, or `auto` (seasons on).
+// The words `/relay pack <word>` and the tool's `set` take: a pack id, `shuffle`, or `auto` (seasons on).
 async function setByWord($: EngineInterface, word: string): Promise<Reply> {
   if (word === AUTO) return setSeasons($, true)
   if (word === SHUFFLE) return setShuffle($, [])
@@ -1130,18 +1130,37 @@ async function openGallery($: EngineInterface): Promise<string> {
   return 'Sprite pack gallery opened.'
 }
 
-// The handler of /relay-packs and of its old name /relay-pack.
-async function runPacks($: EngineInterface, e: { args?: string }): Promise<{ text: string }> {
-  const arg = (e.args ?? '').trim()
-  if (!arg || arg === 'list') return { text: await packList($) }
-  if (arg === 'preview') return { text: await openGallery($) }
-  const [word = '', ...rest] = arg.split(/[\s,]+/).filter(Boolean)
-  if (word === 'shuffle') return { text: (await setShuffle($, rest)).text }
-  if (word === 'seasons') {
-    if (rest.length === 1 && (rest[0] === 'on' || rest[0] === 'off')) return { text: (await setSeasons($, rest[0] === 'on')).text }
-    return { text: 'usage: /relay-packs seasons on|off' }
+// Opens the agents pane (`open`: without toggling it, forward from behind another tab), or toggles it.
+async function agentsPane($: EngineInterface, open: boolean): Promise<string> {
+  if (open) {
+    const at = await $.clock.now()
+    await update($, now, () => at)
+    await $.ui.open({ id: PANE, title: tr().pane })
+    return tr().opened
   }
-  return { text: (await setByWord($, arg)).text }
+  return (await togglePane($)) ? tr().opened : tr().closed
+}
+
+// Runs one `/relay` subcommand (subcommands.ts parseRelayArgs) and returns the reply the user sees.
+async function runRelay($: EngineInterface, action: RelayAction): Promise<string> {
+  switch (action.kind) {
+    case 'agents':
+      return agentsPane($, action.open)
+    case 'preview':
+      return openGallery($)
+    case 'list':
+      return packList($)
+    case 'shuffle':
+      return (await setShuffle($, action.ids)).text
+    case 'seasons':
+      return (await setSeasons($, action.on)).text
+    case 'seasons-usage':
+      return 'usage: /relay pack seasonal on|off'
+    case 'set':
+      // A word that names no pack: say so and list them (the tool's `set` keeps its own wording).
+      if (!isRegistered(action.word)) return `no pack "${action.word}"; packs: ${packIds().join(', ')}`
+      return (await setEveryday($, action.word)).text
+  }
 }
 
 export const register: Register = (on, options) => {
@@ -1204,47 +1223,29 @@ export const register: Register = (on, options) => {
       // In every agent's tool list, not behind ToolSearch: workers do not go looking for it.
       isDeferred: false,
     })
-    await $.command.register({
-      name: 'relay-agents',
-      description: 'Show or hide the panel of subagents: running, finished and planned, with model, context, cost and time',
-      argumentHint: '[open]',
-      immediate: true,
-    })
     await $.tool.register({
       name: 'pack',
       description:
-        'List, preview or switch the sprite pack drawn in the relay agents panel and the progress bar. ' +
+        'Use when the user asks, in plain words, to see, change, swap or shuffle the sprites, pets or critters drawn in the relay agents panel and the progress bar, or to turn the holiday packs on or off. ' +
         'The everyday pack shows all year; with seasons on, holiday packs (turkeys Nov 15-30, christmas in December) replace it. ' +
         '`list`: the settings line (everyday pack, seasons, what shows now, the next season), then the packs, the one showing marked. ' +
-        '`set` with `id`: make that pack the everyday pack (it shows at once; during a season that season is skipped this year); ' +
+        '`preview`: open a gallery pane showing every pack. ' +
+        '`set` with `id`: make that pack the everyday pack (it shows at once; during a season that season is skipped this year). ' +
+        'The id may be loose: "cat" for cats, "crab" for clawd, "xmas" for christmas, "thanksgiving" for turkeys; ' +
         '`id: "shuffle"` shuffles every non-holiday pack; `id: "auto"` turns seasons on. ' +
-        '`shuffle` with optional `ids`: a random everyday pack each session, from those ids (default: every non-holiday pack). ' +
+        '`shuffle` with optional `ids` (loose names too): a random everyday pack each session, from those ids (default: every non-holiday pack). ' +
         '`seasons` with `on`: holiday packs on or off. ' +
-        '`preview`: open a gallery pane showing every pack.',
+        'The user can also type `/relay pack ...`, `/relay preview` and `/relay agents` (show or hide the agents panel).',
       inputSchema: {
         type: 'object',
         properties: {
           action: { type: 'string', enum: ['list', 'set', 'shuffle', 'seasons', 'preview'] },
-          id: { type: 'string', description: 'For `set`: a pack id as `list` prints it, `shuffle`, or `auto` (seasons on).' },
-          ids: { type: 'array', items: { type: 'string' }, description: 'For `shuffle`: non-holiday pack ids to shuffle; empty or left out = all of them.' },
+          id: { type: 'string', description: 'For `set`: a pack id as `list` prints it or a loose name for one (cat, crab, xmas, thanksgiving), `shuffle`, or `auto` (seasons on).' },
+          ids: { type: 'array', items: { type: 'string' }, description: 'For `shuffle`: non-holiday pack ids (loose names allowed) to shuffle; empty or left out = all of them.' },
           on: { type: 'boolean', description: 'For `seasons`: true shows holiday packs in season, false keeps the everyday pack all year.' },
         },
         required: ['action'],
       },
-    })
-    await $.command.register({
-      name: 'relay-packs',
-      description:
-        'List the sprite packs, set the everyday pack with /relay-packs <id>, shuffle with /relay-packs shuffle [ids], turn holiday packs on or off with /relay-packs seasons on|off, or open the gallery with /relay-packs preview',
-      argumentHint: '[preview | <id> | shuffle [ids] | seasons on|off]',
-      immediate: true,
-    })
-    // The old name, served by the same handler and hidden from the typeahead and /help.
-    await $.command.register({
-      name: OLD_PACKS_COMMAND,
-      description: 'Old name for /relay-packs',
-      argumentHint: '[preview | <id> | shuffle [ids] | seasons on|off]',
-      immediate: true,
     })
 
     // Ticks the running agents' clocks; quiet when nothing runs.
@@ -1259,33 +1260,31 @@ export const register: Register = (on, options) => {
     return started
   })
 
-  on('command.run', { command: 'relay-agents' }, async ($, e) => {
-    // `/relay-agents open` opens the panel, or brings it forward from behind another tab, without toggling it.
-    if ((e.args ?? '').trim() === 'open') {
-      const at = await $.clock.now()
-      await update($, now, () => at)
-      await $.ui.open({ id: PANE, title: tr().pane })
-      return { text: tr().opened }
-    }
-    const isOpen = await togglePane($)
-    return { text: isOpen ? tr().opened : tr().closed }
+  // `/relay` is the relay plugin's skill, and a mod command with a skill's name loses to the skill, so the
+  // panel's subcommands (`/relay agents`, `/relay preview`, `/relay pack ...`) are read here, before the skill
+  // renders. The engine reports the skill as `relay` or `relay:relay`. A panel subcommand is answered and
+  // dropped (the reply shows to the user); every other argument is a task for the skill and passes through.
+  on('prompt.submit', async ($, e, next) => {
+    if (!isRelayCommand(e.command?.name)) return next(e)
+    const action = parseRelayArgs(e.command?.args)
+    if (!action) return next(e)
+    return { drop: await runRelay($, action) }
+  }).catch(($, e, next) => {
+    // A failed subcommand says so, rather than reaching the skill, which would read it as relay-panel missing.
+    if (!next.called && isRelayCommand(e.command?.name) && parseRelayArgs(e.command?.args))
+      return { drop: `relay-panel could not run /relay ${e.command?.args.trim()}; try again, or restart Claude Code` }
+    return next(e)
   })
-
-  // /relay-packs and its old name /relay-pack run the same handler.
-  on('command.run', { command: 'relay-packs' }, runPacks)
-  on('command.run', { command: OLD_PACKS_COMMAND }, runPacks)
-
-  // Only the old name is hidden; the answer is cached for the session, and it never changes.
-  on('command.describe', { command: OLD_PACKS_COMMAND }, (_$, e, next) => next({ ...e, isHidden: true }))
 
   on('tool.call', { tool: PACK_TOOL }, async ($, e) => {
     const input = e as unknown as { action?: string; id?: string; ids?: unknown; on?: unknown }
     if (input.action === 'list') return { result: await packList($) }
     if (input.action === 'preview') return { result: await openGallery($) }
     let r: Reply | undefined
-    if (input.action === 'set') r = await setByWord($, String(input.id ?? '').trim())
+    // Names are matched as `/relay pack <name>` matches them (subcommands.ts looseId): cat, crab, xmas, ...
+    if (input.action === 'set') r = await setByWord($, looseId(String(input.id ?? '').trim()))
     if (input.action === 'shuffle') {
-      const ids = Array.isArray(input.ids) ? input.ids.map(x => String(x).trim()).filter(Boolean) : []
+      const ids = Array.isArray(input.ids) ? input.ids.map(x => String(x).trim()).filter(Boolean).map(x => looseId(x)) : []
       r = await setShuffle($, ids)
     }
     if (input.action === 'seasons') {
