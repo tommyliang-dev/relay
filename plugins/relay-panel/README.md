@@ -11,22 +11,22 @@ Each sprite wears a costume for its role. The main session is the **conductor**.
 
 ## Sprite packs
 
-- **clawd** (the default everyday pack): the original crab, dressed by role: astronaut (conductor), engineer (builder), detective (fixer), racer (tester), pirate (scout), bare (plain).
-- **cats**: British Shorthairs in profile. The role picks one of six coats; the conductor wears a top hat and conducts with a baton, the builder has headphones and a laptop, the fixer a flat cap, the tester spectacles, and the scout a pirate bandana.
-- **dogs**: the role picks the breed: Pomeranian (conductor), corgi (builder), shiba (fixer), bichon frise (tester), husky (scout), and Mabel the Australian shepherd (plain).
 - **adventurers**: front-facing magician (conductor), thief with twin daggers (builder), knight (fixer), healer (tester), archer (scout) and ninja (plain).
+- **cats**: British Shorthairs in profile. The role picks one of six coats; the conductor wears a top hat and conducts with a baton, the builder has headphones and a laptop, the fixer a flat cap, the tester spectacles, and the scout a pirate bandana.
+- **clawd** (the default everyday pack): the original crab, dressed by role: astronaut (conductor), engineer (builder), detective (fixer), racer (tester), pirate (scout), bare (plain).
+- **dogs**: the role picks the breed: Pomeranian (conductor), corgi (builder), shiba (fixer), bichon frise (tester), husky (scout), and Mabel the Australian shepherd (plain).
 
-Seasonal (listed last in `/relay pack` and the gallery):
+Seasonal (listed last in `/relay pack` and the gallery, alphabetical):
 
-- **winter**: front-facing snowman (conductor), yeti (builder), polar bear (fixer), snowy owl (tester), arctic fox (scout) and penguin (plain). They hold no props. Not a holiday pack: it can be the everyday pack or part of a shuffle.
-- **turkeys** (holiday, Nov 15-30): one turkey body with a fanned tail; the role picks the heritage colour: bronze (conductor), bourbon red (builder), slate (fixer), white holland (tester), narragansett (scout), royal palm (plain).
 - **christmas** (holiday, December): Santa (conductor), a gingerbread man with a peppermint mallet (builder), a nutcracker with the same mallet (fixer), Mrs Claus with a test tube (tester), an elf with a lantern (scout) and reindeer (plain). The gingerbread, elf and reindeer get a random look from six.
+- **turkeys** (holiday, Nov 15-30): one turkey body with a fanned tail; the role picks the heritage colour: bronze (conductor), bourbon red (builder), slate (fixer), white holland (tester), narragansett (scout), royal palm (plain).
+- **winter**: front-facing snowman (conductor), yeti (builder), polar bear (fixer), snowy owl (tester), arctic fox (scout) and penguin (plain). They hold no props. Not a holiday pack: it can be the everyday pack or part of a shuffle.
 
 In cats, dogs, turkeys and christmas, fixers hold a peppermint mallet and testers a test tube; scouts in cats, dogs and turkeys hold a flashlight with a beam.
 
 Two settings decide what is drawn. The **everyday pack** shows all year: clawd by default, any pack, or `shuffle` (a random non-holiday pack each session, never the same one twice running). With **seasons** on (the default) holiday packs replace it in season, in local time: turkeys Nov 15-30, Christmas in December (a holiday pack that is not installed leaves the everyday pack showing). The pack is checked at session start and when a new `/relay` plan starts.
 
-`/relay pack` shows the settings (`everyday: cats · seasons on · showing: cats · next: turkeys Nov 15`) and lists the packs: the everyday packs (clawd, cats, dogs, adventurers), then a `seasonal:` group (winter, turkeys, christmas); `/relay pack list` is the same. relay-panel answers these `/relay` subcommands itself on submit, instantly and with no model turn. `/relay pack <name>` sets the everyday pack (loose names: cat → cats, crab → clawd, xmas → christmas, thanksgiving → turkeys; an unknown name replies with the list); picked during a season it shows at once and that season is skipped until it ends. `/relay pack shuffle [names]` shuffles (all non-holiday packs, or the names given). `/relay pack seasonal on|off` turns the holiday packs on or off (`seasons` also works; `/relay pack auto` is `on`). `/relay preview` (or `/relay pack preview`) opens a gallery (everyday packs first, then a Seasonal section: winter, turkeys, christmas) where holiday cards show their dates, the everyday pack reads "Everyday", the one drawn now "Showing", and "Use" sets the everyday pack. Anything longer, like `/relay pack the release into a zip`, goes to the relay skill as a task. Asked in plain words ("use dogs", "shuffle my sprites", "turn off holidays"), Claude does the same through the `pack` tool. Choices stay across sessions and redraw at once.
+`/relay pack` shows the settings (`everyday: cats · seasons on · showing: cats · next: turkeys Nov 15`) and lists the packs: a `characters:` group (adventurers, cats, clawd, dogs), then a `seasonal:` group (christmas, turkeys, winter); `/relay pack list` is the same. relay-panel answers these `/relay` subcommands itself on submit, instantly and with no model turn. `/relay pack <name>` sets the everyday pack (loose names: cat → cats, crab → clawd, xmas → christmas, thanksgiving → turkeys; an unknown name replies with the list); picked during a season it shows at once and that season is skipped until it ends. `/relay pack shuffle [names]` shuffles (all non-holiday packs, or the names given). `/relay pack seasonal on|off` turns the holiday packs on or off (`seasons` also works; `/relay pack auto` is `on`). `/relay preview` (or `/relay pack preview`) opens a gallery (a Characters group, then a Seasonal group, each alphabetical) where holiday cards show their dates, the everyday pack reads "Everyday", the one drawn now "Showing", and "Use" sets the everyday pack. Anything longer, like `/relay pack the release into a zip`, goes to the relay skill as a task. Asked in plain words ("use dogs", "shuffle my sprites", "turn off holidays"), Claude does the same through the `pack` tool. Choices stay across sessions and redraw at once.
 
 ## Tools it adds
 
@@ -56,7 +56,7 @@ Upgrading from 0.2.x: a pack pinned with the old pack command becomes the everyd
 
 Upgrading from 0.3.x: the `crabs` pack is now `clawd`; a stored or configured `crabs` falls back to the default, which is `clawd`. Roles come from the plan (`role` on each task in `mcp__relay-panel__progress`) instead of the task's wording, and are conductor, builder, fixer, tester, scout and plain.
 
-Upgrading to 0.6.0: the pack command was renamed (superseded by 0.7.0); the skill is model-only; the gallery lists the everyday packs, then a Seasonal section (winter, turkeys, christmas). Winter is seasonal for display only and stays a valid everyday and shuffle pack.
+Upgrading to 0.6.0: the pack command was renamed (superseded by 0.7.0); the skill is model-only; the gallery lists the everyday packs, then a Seasonal section. Winter is seasonal for display only and stays a valid everyday and shuffle pack.
 
 Upgrading to 0.7.0: `/relay-agents` is now `/relay agents [open]`; `/relay-packs` and `/relay-pack` are now `/relay pack ...` and `/relay preview`; `seasons on|off` is `seasonal on|off` (`seasons` still works). The old commands are removed, with no aliases. The `relay-packs` skill is removed; plain-word requests go to the `pack` tool.
 

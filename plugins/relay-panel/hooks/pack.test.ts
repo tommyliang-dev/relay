@@ -1,7 +1,7 @@
 import type { On } from 'claude-code'
 import { expect, mock, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
-import { DEFAULT_PACK, SEASONAL_IDS, everydayPacks, packIds, resolvePack, seasonalPacks } from './packs'
+import { DEFAULT_PACK, SEASONAL_IDS, characterPacks, packIds, resolvePack, seasonalPacks } from './packs'
 
 const PLUGIN = 'relay-panel'
 const PROGRESS = 'mcp__relay-panel__progress'
@@ -164,8 +164,8 @@ test('pack tool: list heads with the settings line, then every pack, the one sho
   await session($, on)
   const [head, ...lines] = await listOf($)
   expect(head).toBe(`everyday: ${DEFAULT_PACK} · seasons on · showing: ${DEFAULT_PACK} · next: turkeys Nov 15`)
-  // Every pack plus the `seasonal:` line.
-  expect(lines.length).toBe(packIds().length + 1)
+  // Every pack plus the `characters:` and `seasonal:` lines.
+  expect(lines.length).toBe(packIds().length + 2)
   for (const id of packIds()) {
     const p = resolvePack(id)
     const line = lines.find(l => l.startsWith(`${id}: `))
@@ -173,13 +173,14 @@ test('pack tool: list heads with the settings line, then every pack, the one sho
   }
 })
 
-test('pack tool: list prints the everyday packs, then `seasonal:`, then winter, turkeys, christmas', async ($, on) => {
+test('pack tool: list prints `characters:` and its packs, then `seasonal:` and its packs, each alphabetical', async ($, on) => {
   await session($, on)
   const [, ...lines] = await listOf($)
-  expect(lines.map(l => l.split(':')[0])).toEqual(['clawd', 'cats', 'dogs', 'adventurers', 'seasonal', 'winter', 'turkeys', 'christmas'])
-  expect(lines[4]).toBe('seasonal:')
-  expect(lines.slice(0, 4)).toEqual(everydayPacks().map(p => `${p.id}: ${p.name}${p.id === DEFAULT_PACK ? ' (active)' : ''}`))
-  expect(lines.slice(5)).toEqual(seasonalPacks().map(p => `${p.id}: ${p.name}`))
+  expect(lines.map(l => l.split(':')[0])).toEqual(['characters', 'adventurers', 'cats', 'clawd', 'dogs', 'seasonal', 'christmas', 'turkeys', 'winter'])
+  expect(lines[0]).toBe('characters:')
+  expect(lines[5]).toBe('seasonal:')
+  expect(lines.slice(1, 5)).toEqual(characterPacks().map(p => `${p.id}: ${p.name}${p.id === DEFAULT_PACK ? ' (active)' : ''}`))
+  expect(lines.slice(6)).toEqual(seasonalPacks().map(p => `${p.id}: ${p.name}`))
 })
 
 test('winter is listed as seasonal but stays an everyday pack and a shuffle candidate', async ($, on) => {
@@ -798,24 +799,24 @@ test('gallery: one card per pack, labelled; Use sets the everyday pack', async (
   await ui.unmount()
 })
 
-test('gallery: everyday cards come first, then the Seasonal header, then the seasonal cards (desktop)', async ($, on) => {
+test('gallery: Characters header and cards, then the Seasonal header and cards, each alphabetical (desktop)', async ($, on) => {
   await session($, on)
   const ui = await $.ui.mount({ plugin: PLUGIN, surface: 'desktop', component: 'Pane', requestId: 'relay-packs', props: pane })
   const idOf = (source: string) => packIds().find(id => source.includes(scope(id)))
   const order = (await ui.findAll({})).flatMap(el =>
-    el.type === 'Svg' ? [idOf(String(el.props.source)) ?? '?'] : el.type === 'Text' && el.text === 'Seasonal' ? ['<Seasonal>'] : [],
+    el.type === 'Svg' ? [idOf(String(el.props.source)) ?? '?'] : el.type === 'Text' && el.text === 'Characters' ? ['<Characters>'] : el.type === 'Text' && el.text === 'Seasonal' ? ['<Seasonal>'] : [],
   )
-  expect(order).toEqual([...everydayPacks().map(p => p.id), '<Seasonal>', ...seasonalPacks().map(p => p.id)])
-  expect(order).toEqual(['clawd', 'cats', 'dogs', 'adventurers', '<Seasonal>', 'winter', 'turkeys', 'christmas'])
+  expect(order).toEqual(['<Characters>', ...characterPacks().map(p => p.id), '<Seasonal>', ...seasonalPacks().map(p => p.id)])
+  expect(order).toEqual(['<Characters>', 'adventurers', 'cats', 'clawd', 'dogs', '<Seasonal>', 'christmas', 'turkeys', 'winter'])
   await ui.unmount()
 })
 
-test('gallery: everyday rows come first, then the Seasonal header, then the seasonal rows (terminal)', async ($, on) => {
+test('gallery: Characters header and rows, then the Seasonal header and rows, each alphabetical (terminal)', async ($, on) => {
   await session($, on)
   const ui = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', component: 'Pane', requestId: 'relay-packs', props: pane })
   const names = new Map(packIds().map(id => [nameOf(id), id]))
-  const order = (await ui.findAll({ type: 'Text' })).flatMap(el => (el.text === 'Seasonal' ? ['<Seasonal>'] : names.has(el.text) ? [names.get(el.text) as string] : []))
-  expect(order).toEqual(['clawd', 'cats', 'dogs', 'adventurers', '<Seasonal>', 'winter', 'turkeys', 'christmas'])
+  const order = (await ui.findAll({ type: 'Text' })).flatMap(el => (el.text === 'Characters' ? ['<Characters>'] : el.text === 'Seasonal' ? ['<Seasonal>'] : names.has(el.text) ? [names.get(el.text) as string] : []))
+  expect(order).toEqual(['<Characters>', 'adventurers', 'cats', 'clawd', 'dogs', '<Seasonal>', 'christmas', 'turkeys', 'winter'])
   // Use still sets the pack from a seasonal row.
   expect(await ui.find({ key: 'use-winter' })).toBeDefined()
   await ui.unmount()

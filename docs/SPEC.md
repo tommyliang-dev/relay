@@ -1,6 +1,6 @@
 # relay: spec
 
-Describes relay 0.4.2 and relay-panel 0.7.0.
+Describes relay 0.4.2 and relay-panel 0.7.1.
 
 ## Goal
 
@@ -76,15 +76,15 @@ The orchestrator sets a `role` on every planned task in `mcp__relay-panel__progr
 
 Seven packs. For every pack the role picks the character (or costume, breed, colour) and the tier colour, `accent`, tints part of the costume (a hat band, collar, scarf or clasp). A few characters get a random look from the seed.
 
-In registry (display) order: the everyday packs, then the seasonal group (`SEASONAL_IDS` in `packs/index.ts`: winter, turkeys, christmas). The group is for display only; holidays are `SEASONS` in `packs/seasons.ts`.
+In registry (display) order: the Characters group (every pack not seasonal), then the Seasonal group (`SEASONAL_IDS` in `packs/index.ts`: christmas, turkeys, winter), each alphabetical by id; the list and gallery sort by id, so a new pack lands in the right place. The group is for display only; holidays are `SEASONS` in `packs/seasons.ts`.
 
-1. **clawd**: the stock savvy-progress crab, wrapped; one costume per role (astronaut, engineer, detective, racer, pirate, bare). The default everyday pack.
+1. **adventurers**: front-facing magician with a glowing-orb staff (conductor), thief with twin daggers (builder), knight with sword and shield (fixer), healer with a floating tome (tester), archer with a bow and fire arrow (scout), ninja (plain). 32x30.
 2. **cats**: British Shorthair art; the role picks one of six coats (conductor lilac point, builder cream van, fixer cream and white, tester white, scout cream, plain blue and white).
-3. **dogs**: the role picks the breed (conductor Pomeranian in chocolate and cream, builder corgi, fixer shiba, tester bichon frise, scout husky, plain Mabel the Australian shepherd in blue merle).
-4. **adventurers**: front-facing magician with a glowing-orb staff (conductor), thief with twin daggers (builder), knight with sword and shield (fixer), healer with a floating tome (tester), archer with a bow and fire arrow (scout), ninja (plain). 32x30.
-5. **winter** (seasonal, not a holiday): front-facing snowman (conductor), yeti (builder), polar bear (fixer), snowy owl (tester), arctic fox (scout), penguin (plain). No held props. 36x30.
+3. **clawd**: the stock savvy-progress crab, wrapped; one costume per role (astronaut, engineer, detective, racer, pirate, bare). The default everyday pack.
+4. **dogs**: the role picks the breed (conductor Pomeranian in chocolate and cream, builder corgi, fixer shiba, tester bichon frise, scout husky, plain Mabel the Australian shepherd in blue merle).
+5. **christmas** (holiday, December): one character per role: Santa, gingerbread with a peppermint mallet, nutcracker with the same mallet, Mrs Claus with a test tube, an elf with a lantern, reindeer. Santa, nutcracker and Mrs Claus have one look; gingerbread (dough), elf (tunic) and reindeer (coat) pick one of six looks from the seed.
 6. **turkeys** (holiday, Nov 15-30): one simple body; the role picks the heritage colour (conductor bronze, builder bourbon red, fixer slate, tester white holland, scout narragansett, plain royal palm). No breed silhouettes.
-7. **christmas** (holiday, December): one character per role: Santa, gingerbread with a peppermint mallet, nutcracker with the same mallet, Mrs Claus with a test tube, an elf with a lantern, reindeer. Santa, nutcracker and Mrs Claus have one look; gingerbread (dough), elf (tunic) and reindeer (coat) pick one of six looks from the seed.
+7. **winter** (seasonal, not a holiday): front-facing snowman (conductor), yeti (builder), polar bear (fixer), snowy owl (tester), arctic fox (scout), penguin (plain). No held props. 36x30.
 
 Shared props (cats, dogs, turkeys, christmas): fixers hold the peppermint mallet, testers a test tube, and scouts (cats, dogs, turkeys) a flashlight with a beam; the elf keeps its lantern. Clawd, winter and adventurers use their own props.
 
@@ -139,7 +139,7 @@ Why not a settings key: writing `settings.json` from a mod is heavier, and the o
   - `set` with `id`: a pack id becomes the everyday pack (`ok: everyday pack is Pixel dogs`; in season `ok: Pixel dogs now; Christmas skipped until Dec 31`); `shuffle` shuffles every non-holiday pack; `auto` turns seasons on. An unknown id is refused, naming the valid ones.
   - `shuffle` with optional `ids`: everyday `shuffle` over those ids, with a fresh pick now and the same in-season skip. Holiday or unknown ids are refused, naming the valid ones.
   - `seasons` with `on`: holiday packs on or off (`ok: seasons off; showing Clawd`).
-  - `preview`: opens the sprite pack gallery pane: the everyday cards first (clawd, cats, dogs, adventurers), then a "Seasonal" header, then the seasonal cards (winter, turkeys, christmas); each card shows every role in a row, walking. Labels: holiday cards "Holiday · Nov 15-30" / "Holiday · December", the everyday pack "Everyday", the one drawn now "Showing" (green). "Use" (on every card but the fixed everyday pack) sets the everyday pack.
+  - `preview`: opens the sprite pack gallery pane: a "Characters" header and its cards (adventurers, cats, clawd, dogs), then a "Seasonal" header and its cards (christmas, turkeys, winter); each card shows every role in a row, walking. Labels: holiday cards "Holiday · Nov 15-30" / "Holiday · December", the everyday pack "Everyday", the one drawn now "Showing" (green). "Use" (on every card but the fixed everyday pack) sets the everyday pack.
 - **Slash commands** are subcommands of `/relay`, intercepted by relay-panel on `prompt.submit` (case-insensitive, exact grammar): `/relay agents [open]` (show/hide the panel; `open` only opens or brings it forward), `/relay preview` (gallery; `/relay pack preview` too), `/relay pack` (settings and list; also `pack list`), `/relay pack <name>` (everyday pack; loose names: cat → cats, crab → clawd, xmas → christmas, thanksgiving → turkeys; an unknown name replies with the pack list), `/relay pack shuffle [names]`, `/relay pack seasonal on|off` (`seasons` accepted; `pack auto` = on). An exact match runs instantly with no model turn; anything else (`/relay pack the release into a zip`, `/relay preview the deploy changes`) goes to the relay skill as a task. Why: a mod command cannot share a name with a skill (the skill wins, and a hidden skill then makes "isn't a command here"); 0.6.0's `relay-packs` skill shared its name with the `/relay-packs` command, which is why that command failed. Removed in 0.7.0: `/relay-agents`, `/relay-packs`, `/relay-pack` (no aliases).
 - **No pack skill.** relay-panel ships no skill (0.7.0 removed `relay-packs`). Plain requests ("use dogs", "shuffle my sprites", "turn off holidays") go to the `pack` tool, whose description says when to use it and whose `set` and `shuffle` take the same loose names as `/relay pack`.
 
